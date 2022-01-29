@@ -6,6 +6,7 @@ from datetime import datetime
 import config as cfg
 from dataset import *
 from train import *
+from model import *
 
 
 
@@ -39,6 +40,23 @@ data_loaders = {
 }
 
 
-model = None
+gen_model = GeneratorNet()
+disc_model = DiscriminatorNet()
 
-train_model(model, data_loaders, dataset_sizes)
+gen_optimizer = torch.optim.Adam(gen_model.parameters(), lr=cfg.GEN_LR) #betas=())
+disc_optimizer = torch.optim.Adam(disc_model.parameters(), lr=cfg.DISC_LR, betas=(cfg.DISC_BETA1, cfg.DISC_BETA2))
+
+rec_criterion = nn.MSELoss()
+adv_criterion = nn.BCEWithLogitsLoss()
+
+train_model(gen_model, 
+                disc_model, 
+                gen_optimizer,
+                disc_optimizer,
+                rec_criterion,
+                adv_criterion,
+                cfg.LAMBDA_REC,
+                cfg.LAMBDA_ADV,
+                data_loaders, 
+                dataset_sizes,
+                cfg.NUM_EPOCHS)

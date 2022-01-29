@@ -15,7 +15,7 @@ class NormType:
 	IntanceNorm = 1
 
 
-
+# Basic layers structure for the networks
 def get_basic_structure(input_size,
 						output_size,
 						structure_type, 
@@ -72,46 +72,58 @@ def get_basic_structure(input_size,
 	else:
 		print("unsupported structure type, aborting")
 		exit()
+	
+	return structure
 
 
-
+# Generator network (context encoder)
 class GeneratorNet(nn.Module):
 	def __init__(self):
 		super(GeneratorNet, self).__init__()
-		self.model = [ #nn.Sequential(
-            get_basic_structure(3, 64, StructureType.Compress, ActivationType.LeakyReLU),
-            get_basic_structure(64, 64, StructureType.Compress, ActivationType.LeakyReLU),
-			get_basic_structure(64, 128, StructureType.Compress, ActivationType.LeakyReLU),
-			get_basic_structure(128, 256, StructureType.Compress, ActivationType.LeakyReLU),
-			get_basic_structure(256, 512, StructureType.Compress, ActivationType.LeakyReLU),
+		self.model = nn.Sequential(
+            *get_basic_structure(3, 64, StructureType.Compress, ActivationType.LeakyReLU),
+            *get_basic_structure(64, 64, StructureType.Compress, ActivationType.LeakyReLU),
+			*get_basic_structure(64, 128, StructureType.Compress, ActivationType.LeakyReLU),
+			*get_basic_structure(128, 256, StructureType.Compress, ActivationType.LeakyReLU),
+			*get_basic_structure(256, 512, StructureType.Compress, ActivationType.LeakyReLU),
             nn.Conv2d(512, 4000, 1),
-			get_basic_structure(4000, 512, StructureType.Expand, ActivationType.ReLU),
-            get_basic_structure(512, 256, StructureType.Expand, ActivationType.ReLU),
-			get_basic_structure(256, 128, StructureType.Expand, ActivationType.ReLU),
-			get_basic_structure(128, 64, StructureType.Expand, ActivationType.ReLU),
+			*get_basic_structure(4000, 512, StructureType.Expand, ActivationType.ReLU),
+            *get_basic_structure(512, 256, StructureType.Expand, ActivationType.ReLU),
+			*get_basic_structure(256, 128, StructureType.Expand, ActivationType.ReLU),
+			*get_basic_structure(128, 64, StructureType.Expand, ActivationType.ReLU),
             nn.Conv2d(64, 3, 3, 1, 1),
             nn.Tanh()
-        ]#)
+        )
 
 	def forward(self, input):
-		#return self.model(x)
+		#return self.model(input)
+		# import pdb
+		# pdb.set_trace()
 		x = input
 		for stage in self.model:
-			x = self.model(x)
+			x = stage(x)
+		return x
 
 
 
 
-
+# Discriminator network
 class DiscriminatorNet(nn.Module):
 	def __init__(self):
 		super(DiscriminatorNet, self).__init__()
-		self.model = [ #nn.Sequential(
-
-		]
+		self.model = nn.Sequential(
+			*get_basic_structure(3, 64, StructureType.Compress, ActivationType.LeakyReLU),
+			*get_basic_structure(64, 128, StructureType.Compress, ActivationType.LeakyReLU),
+			*get_basic_structure(128, 256, StructureType.Compress, ActivationType.LeakyReLU),
+			*get_basic_structure(256, 512, StructureType.Compress, ActivationType.LeakyReLU),
+			nn.Conv2d(512, 1, 3, 1, 1)
+		) #]
 
 	def forward(self, input):
-		#return self.model(x)
+		#return self.model(input)
+		# import pdb
+		# pdb.set_trace()
 		x = input
 		for stage in self.model:
-			x = self.model(x)
+			x = stage(x)
+		return x
