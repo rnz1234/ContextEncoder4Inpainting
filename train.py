@@ -15,7 +15,8 @@ def train_model(gen_model,
                 lambda_adv,
                 data_loaders, 
                 dataset_sizes,
-                num_epochs):
+                num_epochs,
+                device):
     for epoch in range(num_epochs):
 
         running_dloss = 0.0
@@ -26,9 +27,9 @@ def train_model(gen_model,
         for batch in tqdm(data_loaders['train']):
             # import pdb
             # pdb.set_trace()
-            orig_image = batch['orig_image']
-            real_parts = batch['orig_parts']
-            masked_image = batch['masked_image'] 
+            orig_image = batch['orig_image'].to(device)
+            real_parts = batch['orig_parts'].to(device)
+            masked_image = batch['masked_image'].to(device)
 
             # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             # Training generator

@@ -9,6 +9,14 @@ from train import *
 from model import *
 
 
+if cfg.USE_GPU:
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    torch.cuda.empty_cache()
+else:
+    device = torch.device("cpu")
+
+print(device)
+
 
 train_set = ImagesDataset(images_dir_path=cfg.DATASET_PATH, 
                 set_type=SetType.TrainSet, 
@@ -43,6 +51,10 @@ data_loaders = {
 gen_model = GeneratorNet()
 disc_model = DiscriminatorNet()
 
+if cfg.USE_GPU:
+    gen_model.to(device)
+    disc_model.to(device)
+
 gen_optimizer = torch.optim.Adam(gen_model.parameters(), lr=cfg.GEN_LR) #betas=())
 disc_optimizer = torch.optim.Adam(disc_model.parameters(), lr=cfg.DISC_LR, betas=(cfg.DISC_BETA1, cfg.DISC_BETA2))
 
@@ -59,4 +71,5 @@ train_model(gen_model,
                 cfg.LAMBDA_ADV,
                 data_loaders, 
                 dataset_sizes,
-                cfg.NUM_EPOCHS)
+                cfg.NUM_EPOCHS,
+                device)
