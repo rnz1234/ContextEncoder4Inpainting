@@ -1,7 +1,6 @@
+import os
 
-
-
-DATASET_PATH = '/home/ranz/projects/github_projects/dl4vision_course/context_encoders/data/photo'
+DATASET_PATH = os.environ["DATASET"]
 
 TRAIN_SET_RATIO = 0.7
 VALID_SET_RATIO = 1 - TRAIN_SET_RATIO
@@ -19,5 +18,7 @@ DISC_BETA2 = 0.999
 
 LAMBDA_REC = 0.999
 LAMBDA_ADV = 0.001
+
+MAX_BLOCKS = 10
 
 USE_GPU = False
