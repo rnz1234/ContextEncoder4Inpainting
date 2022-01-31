@@ -2,6 +2,7 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
+import os
 
 import config as cfg
 from dataset import *
@@ -20,7 +21,7 @@ print(device)
 
 train_set = ImagesDataset(images_dir_path=cfg.DATASET_PATH, 
                 set_type=SetType.TrainSet, 
-                masking_method=MaskingMethod.CentralRegion, 
+                masking_method=eval("MaskingMethod."+cfg.TRAIN_MASKING_METHOD), 
                 image_dim_size=256, 
                 mask_dim_size=128,
                 transform=transforms.Compose([
@@ -29,7 +30,7 @@ train_set = ImagesDataset(images_dir_path=cfg.DATASET_PATH,
 
 valid_set = ImagesDataset(images_dir_path=cfg.DATASET_PATH, 
                 set_type=SetType.ValidSet, 
-                masking_method=MaskingMethod.CentralRegion, 
+                masking_method=eval("MaskingMethod."+cfg.VALID_MASKING_METHOD), 
                 image_dim_size=256, 
                 mask_dim_size=128,
                 transform=transforms.Compose([
@@ -44,7 +45,7 @@ dataset_sizes = {
    
 data_loaders = {
     'train': DataLoader(train_set, batch_size=cfg.BATCH_SIZE, num_workers=cfg.NUM_OF_WORKERS_DATALOADER, pin_memory=True, shuffle=True, drop_last=True),
-    'val': DataLoader(valid_set, batch_size=cfg.BATCH_SIZE, num_workers=cfg.NUM_OF_WORKERS_DATALOADER, pin_memory=True, shuffle=False, drop_last=True)
+    'valid': DataLoader(valid_set, batch_size=cfg.BATCH_SIZE, num_workers=cfg.NUM_OF_WORKERS_DATALOADER, pin_memory=True, shuffle=False, drop_last=True)
 }
 
 
@@ -61,7 +62,27 @@ disc_optimizer = torch.optim.Adam(disc_model.parameters(), lr=cfg.DISC_LR, betas
 rec_criterion = nn.MSELoss()
 adv_criterion = nn.BCEWithLogitsLoss()
 
-train_model(gen_model, 
+params = [cfg.BATCH_SIZE,
+cfg.NUM_EPOCHS,
+cfg.GEN_LR,
+cfg.DISC_LR,
+cfg.DISC_BETA1,
+cfg.DISC_BETA2,
+cfg.LAMBDA_REC,
+cfg.LAMBDA_ADV]
+
+params_str = '_'.join([str(p) for p in params])
+now = datetime.now()
+date_time = now.strftime("%m_%d_%Y_%H_%M_%S")
+experiment_name = 'logs/' + cfg.DATASET_SELECT + '/experiment_' + date_time + 'train' + cfg.TRAIN_MASKING_METHOD + '_valid' + cfg.VALID_MASKING_METHOD + '_' + params_str
+
+writer = SummaryWriter(experiment_name) 
+
+# model_path = 'weights/Morph2Diff/unified/iter/' + experiment_name + "_" + "unfreezecnnon5_transforms" #Diff_RangerLars_lr_1e3_4096_epochs_60_batch_32_vgg16_warmup_10k_cosine_bin_1_2'
+# if not os.path.exists(model_path):
+#     os.makedirs(model_path)
+
+gen_model = train_model(gen_model, 
                 disc_model, 
                 gen_optimizer,
                 disc_optimizer,
@@ -72,4 +93,5 @@ train_model(gen_model,
                 data_loaders, 
                 dataset_sizes,
                 cfg.NUM_EPOCHS,
-                device)
+                device, 
+                writer)

@@ -1,13 +1,14 @@
+from dataset import MaskingMethod
 
+DATASET_SELECT = 'photo'
 
+DATASET_PATH = 'c:/Users/keller/ran/ContextEncoder4Inpainting/data/' + DATASET_SELECT
 
-DATASET_PATH = '/home/ranz/projects/github_projects/dl4vision_course/context_encoders/data/photo'
-
-TRAIN_SET_RATIO = 0.7
+TRAIN_SET_RATIO = 0.8
 VALID_SET_RATIO = 1 - TRAIN_SET_RATIO
 
 BATCH_SIZE = 32
-NUM_OF_WORKERS_DATALOADER = 0 #1 #4
+NUM_OF_WORKERS_DATALOADER = 0#4
 
 NUM_EPOCHS = 20
 
@@ -20,4 +21,14 @@ DISC_BETA2 = 0.999
 LAMBDA_REC = 0.999
 LAMBDA_ADV = 0.001
 
-USE_GPU = False
+USE_GPU = True
+
+
+TRAIN_MASKING_METHOD = "CentralRegion"
+VALID_MASKING_METHOD = "CentralRegion"
+
+
+
+
+
+
