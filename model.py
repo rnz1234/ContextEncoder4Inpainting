@@ -12,7 +12,7 @@ class ActivationType:
 
 class NormType:
 	BatchNorm = 0
-	IntanceNorm = 1
+	InstanceNorm = 1
 
 
 # Basic layers structure for the networks
@@ -112,10 +112,10 @@ class DiscriminatorNet(nn.Module):
 	def __init__(self):
 		super(DiscriminatorNet, self).__init__()
 		self.model = nn.Sequential(
-			*get_basic_structure(3, 64, StructureType.Compress, ActivationType.LeakyReLU),
-			*get_basic_structure(64, 128, StructureType.Compress, ActivationType.LeakyReLU),
-			*get_basic_structure(128, 256, StructureType.Compress, ActivationType.LeakyReLU),
-			*get_basic_structure(256, 512, StructureType.Compress, ActivationType.LeakyReLU),
+			*get_basic_structure(3, 64, StructureType.Compress, ActivationType.LeakyReLU, norm=NormType.InstanceNorm),
+			*get_basic_structure(64, 128, StructureType.Compress, ActivationType.LeakyReLU, norm=NormType.InstanceNorm),
+			*get_basic_structure(128, 256, StructureType.Compress, ActivationType.LeakyReLU, norm=NormType.InstanceNorm),
+			*get_basic_structure(256, 512, StructureType.Compress, ActivationType.LeakyReLU, norm=NormType.InstanceNorm),
 			nn.Conv2d(512, 1, 3, 1, 1)
 		) #]
 
