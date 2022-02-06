@@ -2,7 +2,7 @@ import glob
 from random import randrange
 import torch
 from torch.utils.data import Dataset
-from PIL import Image
+from PIL import Image, ImageChops
 import numpy as np
 import matplotlib.pyplot as plt
 from copy import deepcopy
@@ -22,7 +22,8 @@ class SetType:
 
 
 class ImagesDataset(Dataset):
-    def __init__(self, images_dir_path, set_type=SetType.TrainSet, masking_method=MaskingMethod.CentralRegion, image_dim_size=256, mask_dim_size=128, transform=None):
+    def __init__(self, images_dir_path, set_type=SetType.TrainSet, masking_method=MaskingMethod.CentralRegion,
+                 image_dim_size=256, mask_dim_size=128, transform=None):
         self.set_type = set_type
         self.image_files = glob.glob(images_dir_path + "/*.jpg")
         if self.set_type == SetType.TrainSet:
@@ -63,12 +64,25 @@ class ImagesDataset(Dataset):
             ids.append((mask_low_idx, mask_high_idx, mask_low_idy, mask_high_idy))
         for mask_low_idx, mask_high_idx, mask_low_idy, mask_high_idy in ids:
             masked_image[:, mask_low_idx:mask_high_idx, mask_low_idy:mask_high_idy] = 1
+        orig_parts = ImageChops.subtract(image, masked_image)
+
         return masked_image, orig_parts
 
     def _mask_random_region(self, image):
         # TODO : add logic
-        orig_parts = None
+        orig_parts = deepcopy(image)
+        orig_parts[:, :, :] = 0
+        curr_idx = randrange(0, self.image_dim_size)
+        curr_idy = randrange(0, self.image_dim_size)
         masked_image = deepcopy(image)
+        for i in range(self.mask_dim_size):
+            next_idx = randrange(-1, 2)
+            next_idy = randrange(-1, 2)
+            if 0 <= curr_idx + next_idx < self.image_dim_size and 0 <= curr_idy + next_idy < self.image_dim_size:
+                orig_parts[:, curr_idx + next_idx, curr_idy + next_idy] = image[:, curr_idx + next_idx, curr_idy + next_idy]
+                masked_image[:, curr_idx + next_idx, curr_idy + next_idy] = 1
+                curr_idx += next_idx
+                curr_idy += next_idy
         return masked_image, orig_parts
 
     def __getitem__(self, idx):
@@ -90,7 +104,7 @@ class ImagesDataset(Dataset):
 
         # import pdb
         # pdb.set_trace()
-        return {"orig_image" : image, "masked_image" : masked_image, "orig_parts" : orig_parts}
+        return {"orig_image": image, "masked_image": masked_image, "orig_parts": orig_parts}
 
     def __len__(self):
         return len(self.set_files)
