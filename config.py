@@ -36,5 +36,8 @@ VALID_MASKING_METHOD = "CentralRegion"
 
 
 
+MAX_BLOCKS = 10
 
+USE_GPU = False
 
+SHOW_IMAGE = True

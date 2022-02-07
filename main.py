@@ -1,6 +1,5 @@
 from torch.utils.data import DataLoader
 from torchvision import transforms
-from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
 import os
 
@@ -8,6 +7,7 @@ import config as cfg
 from dataset import *
 from train import *
 from model import *
+import matplotlib.pyplot as plt
 
 if cfg.FIXED_RANDOM:
     torch.manual_seed(cfg.RANDOM_SEED)
@@ -15,6 +15,7 @@ if cfg.FIXED_RANDOM:
     random.seed(cfg.RANDOM_SEED)
 
 
+<<<<<<< HEAD
 if cfg.USE_GPU:
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     torch.cuda.empty_cache()
@@ -32,6 +33,14 @@ train_set = ImagesDataset(images_dir_path=cfg.DATASET_PATH,
                 transform=transforms.Compose([
                 transforms.ToTensor(),
                 ]))
+
+if cfg.SHOW_IMAGE:
+    data = train_set[0]
+    plt.imshow(np.transpose(data["masked_image"].numpy(), (1, 2, 0)))
+    plt.show()
+    plt.imshow(np.transpose(data["orig_parts"].numpy(), (1, 2, 0)))
+    plt.show()
+    exit()
 
 valid_set = ImagesDataset(images_dir_path=cfg.DATASET_PATH, 
                 set_type=SetType.ValidSet, 
@@ -100,3 +109,7 @@ gen_model = train_model(gen_model,
                 cfg.NUM_EPOCHS,
                 device, 
                 writer)
+
+
+
+
