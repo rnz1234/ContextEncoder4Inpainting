@@ -9,6 +9,11 @@ from dataset import *
 from train import *
 from model import *
 
+if cfg.FIXED_RANDOM:
+    torch.manual_seed(cfg.RANDOM_SEED)
+    np.random.seed(cfg.RANDOM_SEED)
+    random.seed(cfg.RANDOM_SEED)
+
 
 if cfg.USE_GPU:
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -22,8 +27,8 @@ print(device)
 train_set = ImagesDataset(images_dir_path=cfg.DATASET_PATH, 
                 set_type=SetType.TrainSet, 
                 masking_method=eval("MaskingMethod."+cfg.TRAIN_MASKING_METHOD), 
-                image_dim_size=256, 
-                mask_dim_size=128,
+                image_dim_size=cfg.IMAGE_SIZE, 
+                mask_dim_size=cfg.MASK_SIZE,
                 transform=transforms.Compose([
                 transforms.ToTensor(),
                 ]))
@@ -31,8 +36,8 @@ train_set = ImagesDataset(images_dir_path=cfg.DATASET_PATH,
 valid_set = ImagesDataset(images_dir_path=cfg.DATASET_PATH, 
                 set_type=SetType.ValidSet, 
                 masking_method=eval("MaskingMethod."+cfg.VALID_MASKING_METHOD), 
-                image_dim_size=256, 
-                mask_dim_size=128,
+                image_dim_size=cfg.IMAGE_SIZE, 
+                mask_dim_size=cfg.MASK_SIZE,
                 transform=transforms.Compose([
                 transforms.ToTensor(),
                 ]))

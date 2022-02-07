@@ -113,7 +113,11 @@ def train_model(gen_model,
         writer.add_scalar('Generator Adv. Loss/{}'.format('train'), epoch_gadv_loss, epoch)
 
         # run validation
-        validate(gen_model, disc_model, rec_criterion, adv_criterion, lambda_rec, lambda_adv, data_loaders['valid'], dataset_sizes['valid'], epoch, device, writer)
+        if (epoch+1) % 20 == 0:
+            show_examples = True
+        else:
+            show_examples = False
+        validate(gen_model, disc_model, rec_criterion, adv_criterion, lambda_rec, lambda_adv, data_loaders['valid'], dataset_sizes['valid'], epoch, device, writer, show_examples)
                 
     return gen_model
 
@@ -130,7 +134,8 @@ def validate(gen_model,
                 dataset_size_valid,
                 epoch,
                 device,
-                writer):
+                writer,
+                show_examples):
 
     gen_model.eval()
     disc_model.eval()
@@ -148,11 +153,14 @@ def validate(gen_model,
         
         # avoid calculating gradients
         with torch.no_grad():
-            if i == 0:
-                # import pdb
-                # pdb.set_trace()
-                #masked_image[0].view(1, masked_image[0].shape[0], masked_image[0].shape[1], masked_image[0].shape[2])
-                evaluate_on_image(masked_image[0], orig_image[0], gen_model)
+            if show_examples:
+                if i == 0:
+                    # import pdb
+                    # pdb.set_trace()
+                    #masked_image[0].view(1, masked_image[0].shape[0], masked_image[0].shape[1], masked_image[0].shape[2])
+                    for j in range(4):
+                        evaluate_on_image(masked_image[j], orig_image[j], gen_model)
+                    
 
             # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             # Calculating generator loss

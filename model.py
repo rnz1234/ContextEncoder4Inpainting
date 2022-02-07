@@ -92,7 +92,8 @@ class GeneratorNet(nn.Module):
 			*get_basic_structure(256, 128, StructureType.Expand, ActivationType.ReLU),
 			*get_basic_structure(128, 64, StructureType.Expand, ActivationType.ReLU),
             nn.Conv2d(64, 3, 3, 1, 1),
-            nn.Tanh()
+			nn.Sigmoid()
+            #nn.Tanh()
         )
 
 	def forward(self, input):
