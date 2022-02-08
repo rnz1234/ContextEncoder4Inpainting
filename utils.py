@@ -21,12 +21,16 @@ def evaluate_on_image(masked_image, orig_image, gen_model):
         axarr[0].imshow(masked_image_to_show)
         #plt.show()
 
+        import pdb
+        pdb.set_trace()
+
         g_out = gen_model(x)
         out_image = g_out.cpu().numpy()[0]
         out_image_to_show = np.moveaxis(out_image, 0, -1)
-
-        out_image_to_show = build_inpainted_image_center(masked_image_to_show, out_image_to_show, cfg.IMAGE_SIZE, cfg.MASK_SIZE)
         
+        if cfg.MASKING_METHOD == "CentralRegion":
+            out_image_to_show = build_inpainted_image_center(masked_image_to_show, out_image_to_show, cfg.IMAGE_SIZE, cfg.MASK_SIZE)
+
         #plt.imshow(out_image_to_show)
         axarr[1].imshow(out_image_to_show)
         #plt.show()

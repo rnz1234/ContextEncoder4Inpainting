@@ -53,11 +53,15 @@ def train_model(gen_model,
             # run generator model
             g_out = gen_model(masked_image)
 
+            #print("1")
+
             # recognition loss
             g_rec_loss = rec_criterion(g_out, real_parts)
 
             # run discriminator model
             d_out = disc_model(g_out)
+
+            #print("2")
 
             # adversarial loss : try to fool discriminator (make generator generate images discrimintor cannot mark as fake)
             g_adv_loss = adv_criterion(d_out, torch.ones_like(d_out))
@@ -69,6 +73,8 @@ def train_model(gen_model,
             g_loss.backward()
             gen_optimizer.step()
 
+            #print("3")
+
             
             # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             # Training discriminator
@@ -78,7 +84,10 @@ def train_model(gen_model,
             disc_optimizer.zero_grad()
 
             # run discriminator to train identification of real data
-            d_out_real = disc_model(real_parts)
+            if cfg.MASKING_METHOD == "CentralRegion":
+                d_out_real = disc_model(real_parts)
+            else:
+                d_out_real = disc_model(orig_image)
             d_adv_real_loss = adv_criterion(d_out_real, torch.ones_like(d_out))
 
             # run discriminator to train identification of fake data
@@ -113,7 +122,7 @@ def train_model(gen_model,
         writer.add_scalar('Generator Adv. Loss/{}'.format('train'), epoch_gadv_loss, epoch)
 
         # run validation
-        if (epoch+1) % 20 == 0:
+        if (epoch+1) % 1 == 0:
             show_examples = True
         else:
             show_examples = False
@@ -145,7 +154,7 @@ def validate(gen_model,
     running_grec_loss = 0.0
     running_gadv_loss = 0.0
 
-    for i, batch in enumerate(data_loader_valid):
+    for i, batch in enumerate(tqdm(data_loader_valid)):
         orig_image = batch['orig_image'].to(device)
         real_parts = batch['orig_parts'].to(device)
         masked_image = batch['masked_image'].to(device)
@@ -186,7 +195,10 @@ def validate(gen_model,
             # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
             # run discriminator to train identification of real data
-            d_out_real = disc_model(real_parts)
+            if cfg.MASKING_METHOD == "CentralRegion":
+                d_out_real = disc_model(real_parts)
+            else:
+                d_out_real = disc_model(orig_image)
             d_adv_real_loss = adv_criterion(d_out_real, torch.ones_like(d_out))
 
             # run discriminator to train identification of fake data

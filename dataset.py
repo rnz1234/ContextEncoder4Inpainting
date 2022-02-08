@@ -29,7 +29,7 @@ class ImagesDataset(Dataset):
         if self.set_type == SetType.TrainSet:
             self.set_files = self.image_files[:int(cfg.TRAIN_SET_RATIO * len(self.image_files))]
         else:
-            self.set_files = self.image_files[int(cfg.TRAIN_SET_RATIO * len(self.image_files)):]
+            self.set_files = self.image_files[int((1-cfg.VALID_SET_RATIO) * len(self.image_files)):]
         self.masking_method = masking_method
         self.image_dim_size = image_dim_size
         self.mask_dim_size = mask_dim_size

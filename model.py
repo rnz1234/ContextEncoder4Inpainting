@@ -78,10 +78,12 @@ def get_basic_structure(input_size,
 
 # Generator network (context encoder)
 class GeneratorNet(nn.Module):
-	def __init__(self):
+	def __init__(self, output_full_image=False):
 		super(GeneratorNet, self).__init__()
-		self.model = nn.Sequential(
-            *get_basic_structure(3, 64, StructureType.Compress, ActivationType.LeakyReLU),
+
+		self.output_full_image = output_full_image
+
+		base_modules = [*get_basic_structure(3, 64, StructureType.Compress, ActivationType.LeakyReLU),
             *get_basic_structure(64, 64, StructureType.Compress, ActivationType.LeakyReLU),
 			*get_basic_structure(64, 128, StructureType.Compress, ActivationType.LeakyReLU),
 			*get_basic_structure(128, 256, StructureType.Compress, ActivationType.LeakyReLU),
@@ -90,19 +92,31 @@ class GeneratorNet(nn.Module):
 			*get_basic_structure(4000, 512, StructureType.Expand, ActivationType.ReLU),
             *get_basic_structure(512, 256, StructureType.Expand, ActivationType.ReLU),
 			*get_basic_structure(256, 128, StructureType.Expand, ActivationType.ReLU),
-			*get_basic_structure(128, 64, StructureType.Expand, ActivationType.ReLU),
-            nn.Conv2d(64, 3, 3, 1, 1),
+			*get_basic_structure(128, 64, StructureType.Expand, ActivationType.ReLU)]
+
+		if self.output_full_image:
+			base_modules.extend([*get_basic_structure(64, 32, StructureType.Expand, ActivationType.ReLU), 
+									nn.Conv2d(32, 3, 3, 1, 1)])
+		else:
+			base_modules.append(nn.Conv2d(64, 3, 3, 1, 1))
+
+
+		self.model = nn.Sequential(
+            *base_modules,
 			nn.Sigmoid()
             #nn.Tanh()
         )
 
+		#print(self.model)
+
 	def forward(self, input):
 		#return self.model(input)
-		# import pdb
-		# pdb.set_trace()
 		x = input
 		for stage in self.model:
 			x = stage(x)
+
+		# import pdb
+		# pdb.set_trace()
 		return x
 
 
@@ -121,10 +135,10 @@ class DiscriminatorNet(nn.Module):
 		) #]
 
 	def forward(self, input):
-		#return self.model(input)
+		return self.model(input)
 		# import pdb
 		# pdb.set_trace()
-		x = input
-		for stage in self.model:
-			x = stage(x)
-		return x
+		# x = input
+		# for stage in self.model:
+		# 	x = stage(x)
+		# return x

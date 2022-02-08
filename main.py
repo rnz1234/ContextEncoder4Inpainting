@@ -2,12 +2,14 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 from datetime import datetime
 import os
+import random
 
 import config as cfg
 from dataset import *
 from train import *
 from model import *
 import matplotlib.pyplot as plt
+from torch.utils.tensorboard import SummaryWriter
 
 if cfg.FIXED_RANDOM:
     torch.manual_seed(cfg.RANDOM_SEED)
@@ -15,7 +17,6 @@ if cfg.FIXED_RANDOM:
     random.seed(cfg.RANDOM_SEED)
 
 
-<<<<<<< HEAD
 if cfg.USE_GPU:
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     torch.cuda.empty_cache()
@@ -27,7 +28,7 @@ print(device)
 
 train_set = ImagesDataset(images_dir_path=cfg.DATASET_PATH, 
                 set_type=SetType.TrainSet, 
-                masking_method=eval("MaskingMethod."+cfg.TRAIN_MASKING_METHOD), 
+                masking_method=eval("MaskingMethod."+cfg.MASKING_METHOD), 
                 image_dim_size=cfg.IMAGE_SIZE, 
                 mask_dim_size=cfg.MASK_SIZE,
                 transform=transforms.Compose([
@@ -35,16 +36,19 @@ train_set = ImagesDataset(images_dir_path=cfg.DATASET_PATH,
                 ]))
 
 if cfg.SHOW_IMAGE:
-    data = train_set[0]
-    plt.imshow(np.transpose(data["masked_image"].numpy(), (1, 2, 0)))
-    plt.show()
-    plt.imshow(np.transpose(data["orig_parts"].numpy(), (1, 2, 0)))
-    plt.show()
-    exit()
+    for image in train_set:
+        try:
+            data = image
+            plt.imshow(np.transpose(data["masked_image"].numpy(), (1, 2, 0)))
+            plt.show()
+            plt.imshow(np.transpose(data["orig_parts"].numpy(), (1, 2, 0)))
+            plt.show()
+        except KeyboardInterrupt:
+            exit()
 
 valid_set = ImagesDataset(images_dir_path=cfg.DATASET_PATH, 
                 set_type=SetType.ValidSet, 
-                masking_method=eval("MaskingMethod."+cfg.VALID_MASKING_METHOD), 
+                masking_method=eval("MaskingMethod."+cfg.MASKING_METHOD), 
                 image_dim_size=cfg.IMAGE_SIZE, 
                 mask_dim_size=cfg.MASK_SIZE,
                 transform=transforms.Compose([
@@ -62,8 +66,11 @@ data_loaders = {
     'valid': DataLoader(valid_set, batch_size=cfg.BATCH_SIZE, num_workers=cfg.NUM_OF_WORKERS_DATALOADER, pin_memory=True, shuffle=False, drop_last=True)
 }
 
-
-gen_model = GeneratorNet()
+if cfg.MASKING_METHOD == "CentralRegion":
+    gen_model = GeneratorNet(output_full_image=False)
+else:
+    gen_model = GeneratorNet(output_full_image=True)
+    
 disc_model = DiscriminatorNet()
 
 if cfg.USE_GPU:
@@ -88,7 +95,7 @@ cfg.LAMBDA_ADV]
 params_str = '_'.join([str(p) for p in params])
 now = datetime.now()
 date_time = now.strftime("%m_%d_%Y_%H_%M_%S")
-experiment_name = 'logs/' + cfg.DATASET_SELECT + '/experiment_' + date_time + 'train' + cfg.TRAIN_MASKING_METHOD + '_valid' + cfg.VALID_MASKING_METHOD + '_' + params_str
+experiment_name = 'logs/' + cfg.DATASET_SELECT + '/experiment_' + date_time + 'masking' + cfg.MASKING_METHOD + '_' + params_str
 
 writer = SummaryWriter(experiment_name) 
 
