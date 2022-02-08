@@ -29,7 +29,7 @@ class ImagesDataset(Dataset):
         if self.set_type == SetType.TrainSet:
             self.set_files = self.image_files[:int(cfg.TRAIN_SET_RATIO * len(self.image_files))]
         else:
-            self.set_files = self.image_files[int((1-cfg.VALID_SET_RATIO) * len(self.image_files)):]
+            self.set_files = self.image_files[int((1 - cfg.VALID_SET_RATIO) * len(self.image_files)):]
         self.masking_method = masking_method
         self.image_dim_size = image_dim_size
         self.mask_dim_size = mask_dim_size
@@ -64,8 +64,7 @@ class ImagesDataset(Dataset):
             ids.append((mask_low_idx, mask_high_idx, mask_low_idy, mask_high_idy))
         for mask_low_idx, mask_high_idx, mask_low_idy, mask_high_idy in ids:
             masked_image[:, mask_low_idx:mask_high_idx, mask_low_idy:mask_high_idy] = 1
-        orig_parts = ImageChops.subtract(image, masked_image)
-
+        orig_parts = ImageChops.subtract(image[:, :, :], masked_image[:, :, :])
         return masked_image, orig_parts
 
     def _mask_random_region(self, image):
@@ -79,7 +78,8 @@ class ImagesDataset(Dataset):
             next_idx = randrange(-1, 2)
             next_idy = randrange(-1, 2)
             if 0 <= curr_idx + next_idx < self.image_dim_size and 0 <= curr_idy + next_idy < self.image_dim_size:
-                orig_parts[:, curr_idx + next_idx, curr_idy + next_idy] = image[:, curr_idx + next_idx, curr_idy + next_idy]
+                orig_parts[:, curr_idx + next_idx, curr_idy + next_idy] = image[:, curr_idx + next_idx,
+                                                                          curr_idy + next_idy]
                 masked_image[:, curr_idx + next_idx, curr_idy + next_idy] = 1
                 curr_idx += next_idx
                 curr_idy += next_idy
