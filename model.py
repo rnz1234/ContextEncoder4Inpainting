@@ -124,15 +124,24 @@ class GeneratorNet(nn.Module):
 
 # Discriminator network
 class DiscriminatorNet(nn.Module):
-	def __init__(self):
+	def __init__(self, output_full_image=False):
 		super(DiscriminatorNet, self).__init__()
-		self.model = nn.Sequential(
-			*get_basic_structure(3, 64, StructureType.Compress, ActivationType.LeakyReLU, norm=NormType.InstanceNorm),
+
+		self.output_full_image = output_full_image 
+
+		base_modules = [*get_basic_structure(3, 64, StructureType.Compress, ActivationType.LeakyReLU, norm=NormType.InstanceNorm),
 			*get_basic_structure(64, 128, StructureType.Compress, ActivationType.LeakyReLU, norm=NormType.InstanceNorm),
 			*get_basic_structure(128, 256, StructureType.Compress, ActivationType.LeakyReLU, norm=NormType.InstanceNorm),
-			*get_basic_structure(256, 512, StructureType.Compress, ActivationType.LeakyReLU, norm=NormType.InstanceNorm),
-			nn.Conv2d(512, 1, 3, 1, 1)
-		) #]
+			*get_basic_structure(256, 512, StructureType.Compress, ActivationType.LeakyReLU, norm=NormType.InstanceNorm),]
+		
+		if self.output_full_image:
+			base_modules.extend([*get_basic_structure(512, 1024, StructureType.Compress, ActivationType.LeakyReLU, norm=NormType.InstanceNorm),
+			*get_basic_structure(1024, 2048, StructureType.Compress, ActivationType.LeakyReLU, norm=NormType.InstanceNorm),
+			nn.Conv2d(2048, 1, 3, 1, 1)])
+		else:
+			base_modules.append(nn.Conv2d(512, 1, 3, 1, 1))
+
+		self.model = nn.Sequential(*base_modules)
 
 	def forward(self, input):
 		return self.model(input)

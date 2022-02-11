@@ -31,6 +31,7 @@ train_set = ImagesDataset(images_dir_path=cfg.DATASET_PATH,
                 masking_method=eval("MaskingMethod."+cfg.MASKING_METHOD), 
                 image_dim_size=cfg.IMAGE_SIZE, 
                 mask_dim_size=cfg.MASK_SIZE,
+                mask_max_pixels=cfg.RANDOM_REGION_MASK_MAX_PIXELS,
                 transform=transforms.Compose([
                 transforms.ToTensor(),
                 ]))
@@ -51,6 +52,7 @@ valid_set = ImagesDataset(images_dir_path=cfg.DATASET_PATH,
                 masking_method=eval("MaskingMethod."+cfg.MASKING_METHOD), 
                 image_dim_size=cfg.IMAGE_SIZE, 
                 mask_dim_size=cfg.MASK_SIZE,
+                mask_max_pixels=cfg.RANDOM_REGION_MASK_MAX_PIXELS,
                 transform=transforms.Compose([
                 transforms.ToTensor(),
                 ]))
@@ -68,10 +70,12 @@ data_loaders = {
 
 if cfg.MASKING_METHOD == "CentralRegion":
     gen_model = GeneratorNet(output_full_image=False)
+    disc_model = DiscriminatorNet(output_full_image=False)
 else:
     gen_model = GeneratorNet(output_full_image=True)
+    disc_model = DiscriminatorNet(output_full_image=True)
     
-disc_model = DiscriminatorNet()
+
 
 if cfg.USE_GPU:
     gen_model.to(device)

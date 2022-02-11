@@ -162,13 +162,14 @@ def validate(gen_model,
         
         # avoid calculating gradients
         with torch.no_grad():
-            if show_examples:
-                if i == 0:
-                    # import pdb
-                    # pdb.set_trace()
-                    #masked_image[0].view(1, masked_image[0].shape[0], masked_image[0].shape[1], masked_image[0].shape[2])
-                    for j in range(4):
-                        evaluate_on_image(masked_image[j], orig_image[j], gen_model)
+            if cfg.SHOW_EXAMPLES_RESULTS_ON_VALID_SET:
+                if show_examples:
+                    if i == 0:
+                        # import pdb
+                        # pdb.set_trace()
+                        #masked_image[0].view(1, masked_image[0].shape[0], masked_image[0].shape[1], masked_image[0].shape[2])
+                        for j in range(4):
+                            evaluate_on_image(masked_image[j], orig_image[j], real_parts[j], gen_model, sum_for_random=True)
                     
 
             # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

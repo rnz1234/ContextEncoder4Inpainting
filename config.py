@@ -3,16 +3,17 @@ from dataset import MaskingMethod
 DATASET_SELECT = 'photo'
 
 DATASET_PATH = 'c:/Users/keller/ran/ContextEncoder4Inpainting/data/' + DATASET_SELECT
+RANDOM_REGION_TEMPLATES_PATH = 'c:/Users/keller/ran/ContextEncoder4Inpainting/data/pascal'
 
-TRAIN_SET_RATIO = 0.1#0.8
-VALID_SET_RATIO = 0.1#1 - TRAIN_SET_RATIO
+TRAIN_SET_RATIO = 0.8
+VALID_SET_RATIO = 1 - TRAIN_SET_RATIO
 
 
 NUM_OF_WORKERS_DATALOADER = 0#4
 
 NUM_EPOCHS = 100
 
-GEN_LR = 0.0001 #0.002
+
 
 DISC_LR = 0.0002
 DISC_BETA1 = 0.5
@@ -29,12 +30,15 @@ IMAGE_SIZE = 256
 FIXED_RANDOM = True
 RANDOM_SEED = 42
 
-MASKING_METHOD = "RandomBlock" #"CentralRegion" "RandomBlock" "RandomRegion"
+MASKING_METHOD = "CentralRegion" #"CentralRegion" "RandomBlock" "RandomRegion"
 
+MASK_SIZE = 128
 if MASKING_METHOD == "RandomRegion":
-    MASK_SIZE = 1000
+    GEN_LR = 0.0001 #0.002
 else:
-    MASK_SIZE = 128
+    GEN_LR = 0.002 
+
+RANDOM_REGION_MASK_MAX_PIXELS = 2000
 
 
 if MASKING_METHOD == "CentralRegion":
@@ -50,3 +54,5 @@ MAX_BLOCKS = 10
 USE_GPU = True
 
 SHOW_IMAGE = False#True
+SHOW_EXAMPLES_RESULTS_ON_VALID_SET = True
+

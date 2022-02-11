@@ -4,7 +4,7 @@ from copy import deepcopy
 import matplotlib.pyplot as plt
 import config as cfg
 
-def evaluate_on_image(masked_image, orig_image, gen_model):
+def evaluate_on_image(masked_image, orig_image, real_parts, gen_model, sum_for_random=False):
     with torch.no_grad():
 
         f, axarr = plt.subplots(1, 3)
@@ -21,8 +21,8 @@ def evaluate_on_image(masked_image, orig_image, gen_model):
         axarr[0].imshow(masked_image_to_show)
         #plt.show()
 
-        import pdb
-        pdb.set_trace()
+        # import pdb
+        # pdb.set_trace()
 
         g_out = gen_model(x)
         out_image = g_out.cpu().numpy()[0]
@@ -30,6 +30,11 @@ def evaluate_on_image(masked_image, orig_image, gen_model):
         
         if cfg.MASKING_METHOD == "CentralRegion":
             out_image_to_show = build_inpainted_image_center(masked_image_to_show, out_image_to_show, cfg.IMAGE_SIZE, cfg.MASK_SIZE)
+
+        if sum_for_random:
+            if cfg.MASKING_METHOD == "RandomRegion":
+                out_image_to_show = build_inpainted_image_random(masked_image_to_show, out_image_to_show, real_parts)
+
 
         #plt.imshow(out_image_to_show)
         axarr[1].imshow(out_image_to_show)
@@ -53,4 +58,24 @@ def build_inpainted_image_center(masked_image, reconstructed, image_dim_size, ma
     inpainted_image[mask_low_idx:mask_high_idx, mask_low_idx:mask_high_idx, :] = reconstructed
 
     return inpainted_image
+
+
+def get_mask(real_parts):
+    mask = deepcopy(real_parts.cpu().numpy()[0])
+    mask[mask != 0] = 1
+    return(mask)
+
+def build_inpainted_image_random(masked_image, reconstructed):
+    inpainted_image = deepcopy(masked_image + reconstructed)
+
+    return inpainted_image
+
+
+def build_inpainted_image_random(masked_image, reconstructed, real_parts):
+    inpainted_image = deepcopy(masked_image)
+    inpainted_image[get_mask(real_parts) == 1] = reconstructed[get_mask(real_parts) == 1]
+    #inpainted_image = deepcopy(get_mask(real_parts))#(reconstructed) #masked_image + 
+    
+
+    return inpainted_image #reconstructed #
 
