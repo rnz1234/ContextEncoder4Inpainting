@@ -9,7 +9,8 @@ from dataset import *
 from train import *
 from model import *
 import matplotlib.pyplot as plt
-from torch.utils.tensorboard import SummaryWriter
+if cfg.ENABLE_TENSORBOARD:
+    from torch.utils.tensorboard import SummaryWriter
 
 if cfg.FIXED_RANDOM:
     torch.manual_seed(cfg.RANDOM_SEED)
@@ -69,11 +70,18 @@ data_loaders = {
 }
 
 if cfg.MASKING_METHOD == "CentralRegion":
-    gen_model = GeneratorNet(output_full_image=False)
-    disc_model = DiscriminatorNet(output_full_image=False)
+    gen_model = GeneratorNet(output_full_image=True) #False
+    disc_model = DiscriminatorNet(output_full_image=True) #False
 else:
     gen_model = GeneratorNet(output_full_image=True)
     disc_model = DiscriminatorNet(output_full_image=True)
+
+
+# pretrained model loading
+if cfg.ENABLE_PRETRAINED_MODEL_LOAD:
+    gen_enc_model_file = os.path.join(cfg.PRETRIANED_MODEL_PATH, "gen_encoder_weights.pt")
+    gen_model.load_pretrained_encoder(gen_enc_model_file)
+
     
 
 
@@ -101,7 +109,10 @@ now = datetime.now()
 date_time = now.strftime("%m_%d_%Y_%H_%M_%S")
 experiment_name = 'logs/' + cfg.DATASET_SELECT + '/experiment_' + date_time + 'masking' + cfg.MASKING_METHOD + '_' + params_str
 
-writer = SummaryWriter(experiment_name) 
+if cfg.ENABLE_TENSORBOARD:
+    writer = SummaryWriter(experiment_name) 
+else:
+    writer = None
 
 # model_path = 'weights/Morph2Diff/unified/iter/' + experiment_name + "_" + "unfreezecnnon5_transforms" #Diff_RangerLars_lr_1e3_4096_epochs_60_batch_32_vgg16_warmup_10k_cosine_bin_1_2'
 # if not os.path.exists(model_path):
@@ -120,6 +131,18 @@ gen_model = train_model(gen_model,
                 cfg.NUM_EPOCHS,
                 device, 
                 writer)
+
+print("saving model")
+# save model
+if cfg.ENABLE_MODEL_SAVE:
+    gen_enc_model_file = os.path.join(cfg.MODEL_SAVE_PATH, "gen_encoder_weights.pt")
+    torch.save(gen_model.get_encoder().state_dict(), gen_enc_model_file)
+    gen_dec_model_file = os.path.join(cfg.MODEL_SAVE_PATH, "gen_decoder_weights.pt")
+    torch.save(gen_model.get_encoder().state_dict(), gen_enc_model_file)
+    disc_model_file = os.path.join(cfg.MODEL_SAVE_PATH, "disc_weights.pt")
+    torch.save(disc_model.state_dict(), disc_model_file)
+
+
 
 
 

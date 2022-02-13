@@ -83,41 +83,45 @@ class GeneratorNet(nn.Module):
 
 		self.output_full_image = output_full_image
 
-		base_modules = [*get_basic_structure(3, 64, StructureType.Compress, ActivationType.LeakyReLU),
+		self.base_modules_enc = [*get_basic_structure(3, 64, StructureType.Compress, ActivationType.LeakyReLU),
             *get_basic_structure(64, 64, StructureType.Compress, ActivationType.LeakyReLU),
 			*get_basic_structure(64, 128, StructureType.Compress, ActivationType.LeakyReLU),
 			*get_basic_structure(128, 256, StructureType.Compress, ActivationType.LeakyReLU),
 			*get_basic_structure(256, 512, StructureType.Compress, ActivationType.LeakyReLU),
-            nn.Conv2d(512, 4000, 1),
-			*get_basic_structure(4000, 512, StructureType.Expand, ActivationType.ReLU),
+            nn.Conv2d(512, 4000, 1)]
+
+		self.base_modules_dec = [*get_basic_structure(4000, 512, StructureType.Expand, ActivationType.ReLU),
             *get_basic_structure(512, 256, StructureType.Expand, ActivationType.ReLU),
 			*get_basic_structure(256, 128, StructureType.Expand, ActivationType.ReLU),
 			*get_basic_structure(128, 64, StructureType.Expand, ActivationType.ReLU)]
 
 		if self.output_full_image:
-			base_modules.extend([*get_basic_structure(64, 32, StructureType.Expand, ActivationType.ReLU), 
+			self.base_modules_dec.extend([*get_basic_structure(64, 32, StructureType.Expand, ActivationType.ReLU), 
 									nn.Conv2d(32, 3, 3, 1, 1)])
 		else:
-			base_modules.append(nn.Conv2d(64, 3, 3, 1, 1))
+			self.base_modules_dec.append(nn.Conv2d(64, 3, 3, 1, 1))
 
-
-		self.model = nn.Sequential(
-            *base_modules,
-			nn.Sigmoid()
-            #nn.Tanh()
-        )
+		self.enc_model = nn.Sequential(*self.base_modules_enc)
+		self.dec_model = nn.Sequential(*self.base_modules_dec, nn.Sigmoid())
 
 		#print(self.model)
 
 	def forward(self, input):
-		#return self.model(input)
-		x = input
-		for stage in self.model:
-			x = stage(x)
+		return self.dec_model(self.enc_model(input))
 
-		# import pdb
-		# pdb.set_trace()
-		return x
+	def get_encoder(self, input):
+		return self.enc_model
+
+	def get_decoder(self, input):
+		return self.dec_model
+
+	def load_pretrained_encoder(self, encoder_params_file_path):
+		self.enc_model.load_state_dict(torch.load(encoder_params_file_path))
+
+	def load_pretrained_decoder(self, decoder_params_file_path):
+		self.dec_model.load_state_dict(torch.load(decoder_params_file_path))
+	
+
 
 
 
@@ -145,9 +149,9 @@ class DiscriminatorNet(nn.Module):
 
 	def forward(self, input):
 		return self.model(input)
-		# import pdb
-		# pdb.set_trace()
-		# x = input
-		# for stage in self.model:
-		# 	x = stage(x)
-		# return x
+
+	# def load_model(self, model_params_file_path):
+	# 	self.model.load_state_dict(torch.load(model_params_file_path)) 
+
+	# def get_model(self):
+	# 	return self.model

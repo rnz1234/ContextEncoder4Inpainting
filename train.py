@@ -56,7 +56,7 @@ def train_model(gen_model,
             #print("1")
 
             # recognition loss
-            g_rec_loss = rec_criterion(g_out, real_parts)
+            g_rec_loss = rec_criterion(g_out, orig_image) #real_parts)
 
             # run discriminator model
             d_out = disc_model(g_out)
@@ -84,10 +84,11 @@ def train_model(gen_model,
             disc_optimizer.zero_grad()
 
             # run discriminator to train identification of real data
-            if cfg.MASKING_METHOD == "CentralRegion":
-                d_out_real = disc_model(real_parts)
-            else:
-                d_out_real = disc_model(orig_image)
+            # if cfg.MASKING_METHOD == "CentralRegion":
+            #     d_out_real = disc_model(real_parts)
+            # else:
+            #     d_out_real = disc_model(orig_image)
+            d_out_real = disc_model(orig_image)
             d_adv_real_loss = adv_criterion(d_out_real, torch.ones_like(d_out))
 
             # run discriminator to train identification of fake data
@@ -116,10 +117,11 @@ def train_model(gen_model,
         print("Epoch {epoch}".format(epoch=epoch))
         print("Training | Disc Loss: {disc_loss}, | Gen Loss: {gen_loss}, | gRec Loss: {rec_loss}, | gAdv Loss: {gadv_loss}, |".format(disc_loss=epoch_dloss, gen_loss=epoch_gloss, rec_loss=epoch_grec_loss, gadv_loss=epoch_gadv_loss))
 
-        writer.add_scalar('Discriminator Loss/{}'.format('train'), epoch_dloss, epoch)
-        writer.add_scalar('Generator Loss/{}'.format('train'), epoch_gloss, epoch)
-        writer.add_scalar('Generator Rec. Loss/{}'.format('train'), epoch_grec_loss, epoch)
-        writer.add_scalar('Generator Adv. Loss/{}'.format('train'), epoch_gadv_loss, epoch)
+        if cfg.ENABLE_TENSORBOARD:
+            writer.add_scalar('Discriminator Loss/{}'.format('train'), epoch_dloss, epoch)
+            writer.add_scalar('Generator Loss/{}'.format('train'), epoch_gloss, epoch)
+            writer.add_scalar('Generator Rec. Loss/{}'.format('train'), epoch_grec_loss, epoch)
+            writer.add_scalar('Generator Adv. Loss/{}'.format('train'), epoch_gadv_loss, epoch)
 
         # run validation
         if (epoch+1) % 1 == 0:
@@ -128,7 +130,7 @@ def train_model(gen_model,
             show_examples = False
         validate(gen_model, disc_model, rec_criterion, adv_criterion, lambda_rec, lambda_adv, data_loaders['valid'], dataset_sizes['valid'], epoch, device, writer, show_examples)
                 
-    return gen_model
+    return gen_model, disc_model
 
 
 
@@ -222,10 +224,11 @@ def validate(gen_model,
 
     print("Validation | Disc Loss: {disc_loss}, | Gen Loss: {gen_loss}, | gRec Loss: {rec_loss}, | gAdv Loss: {gadv_loss}, |".format(disc_loss=epoch_dloss, gen_loss=epoch_gloss, rec_loss=epoch_grec_loss, gadv_loss=epoch_gadv_loss))
 
-    writer.add_scalar('Discriminator Loss/{}'.format('valid'), epoch_dloss, epoch)
-    writer.add_scalar('Generator Loss/{}'.format('valid'), epoch_gloss, epoch)
-    writer.add_scalar('Generator Rec. Loss/{}'.format('valid'), epoch_grec_loss, epoch)
-    writer.add_scalar('Generator Adv. Loss/{}'.format('valid'), epoch_gadv_loss, epoch)
+    if cfg.ENABLE_TENSORBOARD:
+        writer.add_scalar('Discriminator Loss/{}'.format('valid'), epoch_dloss, epoch)
+        writer.add_scalar('Generator Loss/{}'.format('valid'), epoch_gloss, epoch)
+        writer.add_scalar('Generator Rec. Loss/{}'.format('valid'), epoch_grec_loss, epoch)
+        writer.add_scalar('Generator Adv. Loss/{}'.format('valid'), epoch_gadv_loss, epoch)
 
 
 
