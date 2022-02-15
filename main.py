@@ -9,24 +9,29 @@ from dataset import *
 from train import *
 from model import *
 import matplotlib.pyplot as plt
+
 if cfg.ENABLE_TENSORBOARD:
     from torch.utils.tensorboard import SummaryWriter
 
+
 if cfg.FIXED_RANDOM:
+    print("Fixing random in order to enable reproduction")
     torch.manual_seed(cfg.RANDOM_SEED)
     np.random.seed(cfg.RANDOM_SEED)
     random.seed(cfg.RANDOM_SEED)
 
 
+print("Setting device for pytorch")
 if cfg.USE_GPU:
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     torch.cuda.empty_cache()
 else:
     device = torch.device("cpu")
 
-print(device)
+print("Device: ", device)
 
 
+print("Creating training set")
 train_set = ImagesDataset(images_dir_path=cfg.DATASET_PATH, 
                 set_type=SetType.TrainSet, 
                 masking_method=eval("MaskingMethod."+cfg.MASKING_METHOD), 
@@ -38,6 +43,7 @@ train_set = ImagesDataset(images_dir_path=cfg.DATASET_PATH,
                 ]))
 
 if cfg.SHOW_IMAGE:
+    print("Debug only: showing training set examples (with masks)")
     for image in train_set:
         try:
             data = image
@@ -48,6 +54,7 @@ if cfg.SHOW_IMAGE:
         except KeyboardInterrupt:
             exit()
 
+print("Creating validation set")
 valid_set = ImagesDataset(images_dir_path=cfg.DATASET_PATH, 
                 set_type=SetType.ValidSet, 
                 masking_method=eval("MaskingMethod."+cfg.MASKING_METHOD), 
@@ -69,22 +76,26 @@ data_loaders = {
     'valid': DataLoader(valid_set, batch_size=cfg.BATCH_SIZE, num_workers=cfg.NUM_OF_WORKERS_DATALOADER, pin_memory=True, shuffle=False, drop_last=True)
 }
 
+print("Creating models")
 if cfg.MASKING_METHOD == "CentralRegion":
-    gen_model = GeneratorNet(output_full_image=True) #False
-    disc_model = DiscriminatorNet(output_full_image=True) #False
+    gen_model = GeneratorNet(output_full_image=False, output_size=cfg.MASK_SIZE) #False
+    disc_model = DiscriminatorNet(input_full_image=False, input_size=cfg.MASK_SIZE) #False
 else:
     gen_model = GeneratorNet(output_full_image=True)
-    disc_model = DiscriminatorNet(output_full_image=True)
+    disc_model = DiscriminatorNet(input_full_image=True)
 
 
 # pretrained model loading
 if cfg.ENABLE_PRETRAINED_MODEL_LOAD:
-    gen_enc_model_file = os.path.join(cfg.PRETRIANED_MODEL_PATH, "gen_encoder_weights.pt")
+    print("Loading pretrained model (for enabling transfer learning)")
+    gen_enc_model_file = os.path.join(cfg.PRETRAINED_MODEL_PATH, "RandomRegion_gen_encoder_weights.pt")
     gen_model.load_pretrained_encoder(gen_enc_model_file)
+elif cfg.APPLY_GAUSSIAN_WEIGHT_INIT:
+    gen_model.apply(weights_init)
+    disc_model.apply(weights_init)
 
-    
 
-
+print("Doing arrangements to run & log model...")
 if cfg.USE_GPU:
     gen_model.to(device)
     disc_model.to(device)
@@ -110,6 +121,7 @@ date_time = now.strftime("%m_%d_%Y_%H_%M_%S")
 experiment_name = 'logs/' + cfg.DATASET_SELECT + '/experiment_' + date_time + 'masking' + cfg.MASKING_METHOD + '_' + params_str
 
 if cfg.ENABLE_TENSORBOARD:
+    print("Setting up experiment logging on Tensorboard")
     writer = SummaryWriter(experiment_name) 
 else:
     writer = None
@@ -118,7 +130,8 @@ else:
 # if not os.path.exists(model_path):
 #     os.makedirs(model_path)
 
-gen_model = train_model(gen_model, 
+print("Runing training...")
+gen_model, disc_model = train_model(gen_model, 
                 disc_model, 
                 gen_optimizer,
                 disc_optimizer,
@@ -132,14 +145,20 @@ gen_model = train_model(gen_model,
                 device, 
                 writer)
 
-print("saving model")
+print("Saving model")
+
+if cfg.MASKING_METHOD == "CentralRegion":
+    save_prefix = "CentralRegion_" + str(cfg.MASK_SIZE)
+else:
+    save_prefix = cfg.MASKING_METHOD
+
 # save model
 if cfg.ENABLE_MODEL_SAVE:
-    gen_enc_model_file = os.path.join(cfg.MODEL_SAVE_PATH, "gen_encoder_weights.pt")
+    gen_enc_model_file = os.path.join(cfg.MODEL_SAVE_PATH, save_prefix + "_gen_encoder_weights.pt")
     torch.save(gen_model.get_encoder().state_dict(), gen_enc_model_file)
-    gen_dec_model_file = os.path.join(cfg.MODEL_SAVE_PATH, "gen_decoder_weights.pt")
-    torch.save(gen_model.get_encoder().state_dict(), gen_enc_model_file)
-    disc_model_file = os.path.join(cfg.MODEL_SAVE_PATH, "disc_weights.pt")
+    gen_dec_model_file = os.path.join(cfg.MODEL_SAVE_PATH, save_prefix + "_gen_decoder_weights.pt")
+    torch.save(gen_model.get_encoder().state_dict(), gen_dec_model_file)
+    disc_model_file = os.path.join(cfg.MODEL_SAVE_PATH, save_prefix + "_disc_weights.pt")
     torch.save(disc_model.state_dict(), disc_model_file)
 
 

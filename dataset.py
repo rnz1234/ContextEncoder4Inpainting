@@ -46,6 +46,8 @@ class ImagesDataset(Dataset):
     def _mask_block(self, image, mask_low_idx, mask_high_idx, mask_low_idy, mask_high_idy):
         masked_image = deepcopy(image)
         # the original parts
+        #orig_part = torch.zeros_like(image)
+        #orig_part[:, mask_low_idx:mask_high_idx, mask_low_idy:mask_high_idy] = deepcopy(image[:, mask_low_idx:mask_high_idx, mask_low_idy:mask_high_idy])
         orig_part = deepcopy(image[:, mask_low_idx:mask_high_idx, mask_low_idy:mask_high_idy])
         # mask by putting max pixel value
         masked_image[:, mask_low_idx:mask_high_idx, mask_low_idy:mask_high_idy] = 1

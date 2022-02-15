@@ -29,8 +29,8 @@ def evaluate_on_image(masked_image, orig_image, real_parts, gen_model, sum_for_r
         out_image_to_show = np.moveaxis(out_image, 0, -1)
         
         if cfg.MASKING_METHOD == "CentralRegion":
-            #out_image_to_show = build_inpainted_image_center(masked_image_to_show, out_image_to_show, cfg.IMAGE_SIZE, cfg.MASK_SIZE)
-            out_image_to_show = build_inpainted_image_full(masked_image_to_show, out_image_to_show, real_parts)
+            out_image_to_show = build_inpainted_image_center(masked_image_to_show, out_image_to_show, cfg.IMAGE_SIZE, cfg.MASK_SIZE)
+            #out_image_to_show = build_inpainted_image_full(masked_image_to_show, out_image_to_show, real_parts)
 
 
         if sum_for_random:
@@ -69,6 +69,9 @@ def get_mask(real_parts):
 
 def build_inpainted_image_full(masked_image, reconstructed, real_parts):
     inpainted_image = deepcopy(masked_image)
+    # print(masked_image.shape)
+    # print(reconstructed.shape)
+    # print(real_parts.shape)
     inpainted_image[get_mask(real_parts) == 1] = reconstructed[get_mask(real_parts) == 1]
     #inpainted_image = deepcopy(get_mask(real_parts))#(reconstructed) #masked_image + 
     

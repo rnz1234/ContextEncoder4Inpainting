@@ -6,6 +6,13 @@ import numpy as np
 from utils import *
 
 
+def weights_init(m):
+    if isinstance(m, torch.nn.Conv2d):
+        m.weight.data.normal_(0.0, 0.02)
+    elif isinstance(m, torch.nn.BatchNorm2d):
+        m.weight.data.normal_(1.0, 0.02)
+        m.bias.data.fill_(0)
+
 def joined_loss(lambda_rec, g_rec_loss, lambda_adv, g_adv_loss):
     return lambda_rec*g_rec_loss + lambda_adv*g_adv_loss
 
@@ -56,7 +63,10 @@ def train_model(gen_model,
             #print("1")
 
             # recognition loss
-            g_rec_loss = rec_criterion(g_out, orig_image) #real_parts)
+            if cfg.MASKING_METHOD == "CentralRegion":
+                g_rec_loss = rec_criterion(g_out, real_parts)
+            else:
+                g_rec_loss = rec_criterion(g_out, orig_image)
 
             # run discriminator model
             d_out = disc_model(g_out)
@@ -84,11 +94,11 @@ def train_model(gen_model,
             disc_optimizer.zero_grad()
 
             # run discriminator to train identification of real data
-            # if cfg.MASKING_METHOD == "CentralRegion":
-            #     d_out_real = disc_model(real_parts)
-            # else:
-            #     d_out_real = disc_model(orig_image)
-            d_out_real = disc_model(orig_image)
+            if cfg.MASKING_METHOD == "CentralRegion":
+                d_out_real = disc_model(real_parts)
+            else:
+                d_out_real = disc_model(orig_image)
+            #d_out_real = disc_model(orig_image)
             d_adv_real_loss = adv_criterion(d_out_real, torch.ones_like(d_out))
 
             # run discriminator to train identification of fake data
