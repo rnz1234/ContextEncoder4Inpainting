@@ -1,52 +1,63 @@
 from dataset import MaskingMethod
 
-DATASET_SELECT = 'photo'
+# Dataset selection
+DATASET_SELECT = 'photo' # 'monet'
+BASE_PROJECT_PATH = '/content/drive/MyDrive/ContextEncoder/'
+#'/home/ranz/projects/github_projects/dl4vision_course/context_encoders/'
 
-DATASET_PATH = 'c:/Users/keller/ran/ContextEncoder4Inpainting/data/' + DATASET_SELECT
+# Train/validation set size
+TRAIN_SET_RATIO = 0.8
+VALID_SET_RATIO = 1 - TRAIN_SET_RATIO
 
-TRAIN_SET_RATIO = 0.1#0.8
-VALID_SET_RATIO = 0.1#1 - TRAIN_SET_RATIO
+# Models Load / Save
+ENABLE_MODEL_SAVE = False
+if DATASET_SELECT == 'photo':
+    MODEL_SAVE_PATH = BASE_PROJECT_PATH + 'models/photo'
+    ENABLE_PRETRAINED_MODEL_LOAD = False
+else:
+    MODEL_SAVE_PATH = BASE_PROJECT_PATH + 'models/monet'
+    ENABLE_PRETRAINED_MODEL_LOAD = True
+    # for Monet dataset, we use transfer learning - we load the big dataset (photo) pretrained model
+    PRETRAINED_MODEL_PATH = BASE_PROJECT_PATH + 'models/photo'
 
+# Inpainting configuration
+MASKING_METHOD = "RandomBlock" #"CentralRegion" "RandomBlock" "RandomRegion"
+MASK_SIZE = 64
+RANDOM_REGION_MASK_MAX_PIXELS = 2000 # Used only for the fully random mode
+MAX_BLOCKS = 10 # Used for the RandomBlock masking method
 
-NUM_OF_WORKERS_DATALOADER = 0#4
+# Training hyper-parameters
+NUM_EPOCHS = 80
 
-NUM_EPOCHS = 100
-
-GEN_LR = 0.0001 #0.002
+BATCH_SIZE = 32
 
 DISC_LR = 0.0002
 DISC_BETA1 = 0.5
 DISC_BETA2 = 0.999
+LAMBDA_REC = 0.99#0.999
+LAMBDA_ADV = 0.01#0.001
 
-LAMBDA_REC = 0.999
-LAMBDA_ADV = 0.001
+if MASKING_METHOD == "RandomRegion":
+    GEN_LR = 0.0001 #0.002
+else:
+    GEN_LR = 0.002
 
-USE_GPU = True
+APPLY_GAUSSIAN_WEIGHT_INIT = True # only relevant in case there's no pretraining
 
+# Derived constants on dataset (do not change)
+DATASET_PATH = BASE_PROJECT_PATH + 'data/' + DATASET_SELECT
+RANDOM_REGION_TEMPLATES_PATH = BASE_PROJECT_PATH + 'data/mask'
+
+# General configuration (not relevant to change)
 IMAGE_SIZE = 256
-
-
 FIXED_RANDOM = True
 RANDOM_SEED = 42
 
-MASKING_METHOD = "RandomBlock" #"CentralRegion" "RandomBlock" "RandomRegion"
-
-if MASKING_METHOD == "RandomRegion":
-    MASK_SIZE = 1000
-else:
-    MASK_SIZE = 128
-
-
-if MASKING_METHOD == "CentralRegion":
-    BATCH_SIZE = 32
-else:
-    BATCH_SIZE = 64
-
-
-
-
-MAX_BLOCKS = 10
-
+# Infrastructure configuration
+NUM_OF_WORKERS_DATALOADER = 0#4
 USE_GPU = True
 
-SHOW_IMAGE = False#True
+# Debug flags
+SHOW_IMAGE = False
+SHOW_EXAMPLES_RESULTS_ON_VALID_SET = True
+ENABLE_TENSORBOARD = False
