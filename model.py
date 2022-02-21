@@ -2,6 +2,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch
 import math
+import config as cfg
 
 class StructureType:
 	Compress = 0
@@ -92,12 +93,17 @@ class GeneratorNet(nn.Module):
 			*get_basic_structure(128, 256, StructureType.Compress, ActivationType.LeakyReLU),
 			*get_basic_structure(256, 512, StructureType.Compress, ActivationType.LeakyReLU),
 			nn.Conv2d(512, 4000, 1)]
+			#*get_basic_structure(512, 1024, StructureType.Compress, ActivationType.LeakyReLU),
+			#nn.Conv2d(1024, 4000, 1)]
 
+		
 		
 		if self.output_full_image:
 			# in this case we reconstruct full image size so architecture is fixed
+			#self.base_modules_dec = [*get_basic_structure(4000, 1024, StructureType.Expand, ActivationType.ReLU),
 			self.base_modules_dec = [*get_basic_structure(4000, 512, StructureType.Expand, ActivationType.ReLU),
-            *get_basic_structure(512, 256, StructureType.Expand, ActivationType.ReLU),
+			#*get_basic_structure(1024, 512, StructureType.Expand, ActivationType.ReLU),
+			*get_basic_structure(512, 256, StructureType.Expand, ActivationType.ReLU),
 			*get_basic_structure(256, 128, StructureType.Expand, ActivationType.ReLU),
 			*get_basic_structure(128, 64, StructureType.Expand, ActivationType.ReLU),
 			*get_basic_structure(64, 32, StructureType.Expand, ActivationType.ReLU), 
@@ -105,13 +111,17 @@ class GeneratorNet(nn.Module):
 		else:
 			# if we want to generate only a patch / resized image, we can optimize further.
 			# we use the amount of layers needed to generate the wanted image size
-			self.base_modules_dec = [*get_basic_structure(4000, 512, StructureType.Expand, ActivationType.ReLU)]
-			for i in range(int(math.log2(output_size/8))-1):
-				self.base_modules_dec.extend([*get_basic_structure(int(512/(2**i)), int(256/(2**i)), StructureType.Expand, ActivationType.ReLU)])
-			self.base_modules_dec.append(nn.Conv2d(int(256/(2**i)), 3, 3, 1, 1))
+			base_width = 512
+			latent_size = 4#8
+			# base_width = 1024
+			# latent_size = 4
+			self.base_modules_dec = [*get_basic_structure(4000, base_width, StructureType.Expand, ActivationType.ReLU)]
+			for i in range(int(math.log2((output_size/2)/latent_size))):
+				self.base_modules_dec.extend([*get_basic_structure(int(base_width/(2**i)), int(base_width/(2**(i+1))), StructureType.Expand, ActivationType.ReLU)])
+			self.base_modules_dec.append(nn.Conv2d(int(base_width/(2**(i+1))), 3, 3, 1, 1))
 
 		self.enc_model = nn.Sequential(*self.base_modules_enc)
-		self.dec_model = nn.Sequential(*self.base_modules_dec, nn.Sigmoid())
+		self.dec_model = nn.Sequential(*self.base_modules_dec, nn.Tanh()) #nn.Sigmoid()) 
 
 		print(self.enc_model)
 		print(self.dec_model)
@@ -119,6 +129,10 @@ class GeneratorNet(nn.Module):
 		#print(self.model)
 
 	def forward(self, input):
+		# latent = self.enc_model(input)
+		# import pdb
+		# pdb.set_trace()
+		# return self.dec_model(latent)
 		return self.dec_model(self.enc_model(input))
 
 	def get_encoder(self):
@@ -158,7 +172,7 @@ class DiscriminatorNet(nn.Module):
 			nn.Conv2d(2048, 1, 3, 1, 1)])
 		else:
 			# partial size - amount of layers changes according to input size
-			for i in range(int(math.log2(input_size/8))-1):
+			for i in range(int(math.log2(input_size/8))):
 				base_modules.extend([*get_basic_structure(64*(2**i), 128*(2**i), StructureType.Compress, ActivationType.LeakyReLU, norm=NormType.InstanceNorm)])	
 			base_modules.append(nn.Conv2d(128*(2**i), 1, 3, 1, 1))
 
@@ -167,8 +181,8 @@ class DiscriminatorNet(nn.Module):
 	def forward(self, input):
 		return self.model(input)
 
-	# def load_model(self, model_params_file_path):
-	# 	self.model.load_state_dict(torch.load(model_params_file_path)) 
+	def load_model(self, model_params_file_path):
+		self.model.load_state_dict(torch.load(model_params_file_path)) 
 
 	# def get_model(self):
 	# 	return self.model

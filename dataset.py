@@ -23,7 +23,7 @@ class SetType:
 
 class ImagesDataset(Dataset):
     def __init__(self, images_dir_path, set_type=SetType.TrainSet, masking_method=MaskingMethod.CentralRegion,
-                 image_dim_size=256, mask_dim_size=128, mask_max_pixels=1000, transform=None):
+                 image_dim_size=256, mask_dim_size=128, mask_max_pixels=1000, overlap=7, transform=None):
         self.set_type = set_type
         self.image_files = glob.glob(images_dir_path + "/*.jpg")
         if self.set_type == SetType.TrainSet:
@@ -36,10 +36,11 @@ class ImagesDataset(Dataset):
         self.image_dim_size = image_dim_size
         self.mask_dim_size = mask_dim_size
         self.mask_max_pixels = mask_max_pixels
+        self.overlap = overlap
         self.transform = transform
 
     def _mask_central_region(self, image):
-        mask_low_idx = (self.image_dim_size - self.mask_dim_size) // 2
+        mask_low_idx = (self.image_dim_size - self.mask_dim_size) // 2 
         mask_high_idx = mask_low_idx + self.mask_dim_size
         return self._mask_block(image, mask_low_idx, mask_high_idx, mask_low_idx, mask_high_idx)
 
@@ -50,11 +51,13 @@ class ImagesDataset(Dataset):
         #orig_part[:, mask_low_idx:mask_high_idx, mask_low_idy:mask_high_idy] = deepcopy(image[:, mask_low_idx:mask_high_idx, mask_low_idy:mask_high_idy])
         orig_part = deepcopy(image[:, mask_low_idx:mask_high_idx, mask_low_idy:mask_high_idy])
         # mask by putting max pixel value
-        masked_image[:, mask_low_idx:mask_high_idx, mask_low_idy:mask_high_idy] = 1
+        if self.set_type == SetType.TrainSet:
+            if cfg.TO_ADD_NOISE_TO_TRAIN_SET:
+                masked_image += np.array(np.random.normal(0.05, 0.05, (masked_image.shape[0], masked_image.shape[1], masked_image.shape[2])), dtype=np.float32)
+        masked_image[:, mask_low_idx + self.overlap : mask_high_idx - self.overlap, mask_low_idy + self.overlap : mask_high_idy - self.overlap] = 1
         return masked_image, orig_part
 
     def _mask_random_block(self, image):
-        # TODO : add logic
         number_of_blocks = randrange(0, cfg.MAX_BLOCKS)
         orig_parts = []
         ids = []
@@ -102,7 +105,7 @@ class ImagesDataset(Dataset):
         newsize = (self.image_dim_size, self.image_dim_size)
         mask_im = Image.open(self.random_region_masks_files[idx % len(self.random_region_masks_files)])
         mask_im = mask_im.resize(newsize)
-        mask_im_tensor = self.transform(mask_im)
+        #mask_im_tensor = self.transform(mask_im)
         mask_im_tensor[mask_im_tensor != 0] = 1
         
         masked_image = deepcopy(image)
@@ -131,6 +134,8 @@ class ImagesDataset(Dataset):
         base_idy = 0
         if self.masking_method == MaskingMethod.CentralRegion:
             masked_image, orig_parts = self._mask_central_region(image)
+            # plt.imshow(np.transpose(image.numpy(), (1, 2, 0)))
+            # plt.show()
             # plt.imshow(np.transpose(masked_image.numpy(), (1, 2, 0)))
             # plt.show()
         elif self.masking_method == MaskingMethod.RandomBlock:

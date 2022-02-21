@@ -31,16 +31,27 @@ else:
 print("Device: ", device)
 
 
+# setting transforms
+transforms_list = []
+if cfg.TO_RESIZE:
+    print("resizing images to", cfg.RESIZE_DIM)
+    transforms_list.append(transforms.Resize((cfg.RESIZE_DIM, cfg.RESIZE_DIM)))
+transforms_list.append(transforms.ToTensor())
+if cfg.TO_NORMALIZE:
+    transforms_list.append(transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)))#(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])) #(0.5, 0.5, 0.5), (0.5, 0.5, 0.5)))
+
+
 print("Creating training set")
+
+
 train_set = ImagesDataset(images_dir_path=cfg.DATASET_PATH, 
                 set_type=SetType.TrainSet, 
                 masking_method=eval("MaskingMethod."+cfg.MASKING_METHOD), 
                 image_dim_size=cfg.IMAGE_SIZE, 
                 mask_dim_size=cfg.MASK_SIZE,
                 mask_max_pixels=cfg.RANDOM_REGION_MASK_MAX_PIXELS,
-                transform=transforms.Compose([
-                transforms.ToTensor(),
-                ]))
+                overlap=cfg.MASK_OVERLAP,
+                transform=transforms.Compose(transforms_list))
 
 if cfg.SHOW_IMAGE:
     print("Debug only: showing training set examples (with masks)")
@@ -61,9 +72,8 @@ valid_set = ImagesDataset(images_dir_path=cfg.DATASET_PATH,
                 image_dim_size=cfg.IMAGE_SIZE, 
                 mask_dim_size=cfg.MASK_SIZE,
                 mask_max_pixels=cfg.RANDOM_REGION_MASK_MAX_PIXELS,
-                transform=transforms.Compose([
-                transforms.ToTensor(),
-                ]))
+                overlap=cfg.MASK_OVERLAP,
+                transform=transforms.Compose(transforms_list))
                 
 
 dataset_sizes = {
@@ -86,13 +96,22 @@ else:
 
 
 # pretrained model loading
-if cfg.ENABLE_PRETRAINED_MODEL_LOAD:
-    print("Loading pretrained model (for enabling transfer learning)")
-    gen_enc_model_file = os.path.join(cfg.PRETRAINED_MODEL_PATH, "RandomRegion_gen_encoder_weights.pt")
-    gen_model.load_pretrained_encoder(gen_enc_model_file)
-elif cfg.APPLY_GAUSSIAN_WEIGHT_INIT:
+if cfg.APPLY_GAUSSIAN_WEIGHT_INIT:
     gen_model.apply(weights_init)
     disc_model.apply(weights_init)
+
+if cfg.ENABLE_PRETRAINED_MODEL_LOAD:
+    print("Loading pretrained model (for enabling transfer learning)")
+    if cfg.DATASET_SELECT == "photo":
+        gen_enc_model_file = os.path.join(cfg.PRETRAINED_MODEL_PATH, "CentralRegion_64_gen_encoder_weights.pt")
+        #gen_dec_model_file = os.path.join(cfg.PRETRAINED_MODEL_PATH, "CentralRegion_64_gen_decoder_weights.pt")
+        #disc_model_file = os.path.join(cfg.PRETRAINED_MODEL_PATH, "CentralRegion_64_disc_weights.pt")
+        gen_model.load_pretrained_encoder(gen_enc_model_file)
+        #gen_model.load_pretrained_decoder(gen_dec_model_file)
+        #disc_model.load_model(disc_model_file)
+    else:
+        gen_enc_model_file = os.path.join(cfg.PRETRAINED_MODEL_PATH, "RandomRegion_gen_encoder_weights.pt")
+        gen_model.load_pretrained_encoder(gen_enc_model_file)
 
 
 print("Doing arrangements to run & log model...")
@@ -157,7 +176,7 @@ if cfg.ENABLE_MODEL_SAVE:
     gen_enc_model_file = os.path.join(cfg.MODEL_SAVE_PATH, save_prefix + "_gen_encoder_weights.pt")
     torch.save(gen_model.get_encoder().state_dict(), gen_enc_model_file)
     gen_dec_model_file = os.path.join(cfg.MODEL_SAVE_PATH, save_prefix + "_gen_decoder_weights.pt")
-    torch.save(gen_model.get_encoder().state_dict(), gen_dec_model_file)
+    torch.save(gen_model.get_decoder().state_dict(), gen_dec_model_file)
     disc_model_file = os.path.join(cfg.MODEL_SAVE_PATH, save_prefix + "_disc_weights.pt")
     torch.save(disc_model.state_dict(), disc_model_file)
 
