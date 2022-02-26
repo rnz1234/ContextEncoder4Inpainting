@@ -12,11 +12,13 @@ def evaluate_on_image(masked_image, orig_image, real_parts, gen_model, sum_for_r
         x = masked_image
         x = x.view(1, x.shape[0], x.shape[1], x.shape[2])
 
-        MEAN = torch.tensor([0.5,0.5,0.5])#([0.485, 0.456, 0.406]) #np.array([0.485, 0.456, 0.406]) #
-        STD = torch.tensor([0.5,0.5,0.5])#([0.229, 0.224, 0.225]) #np.array([0.229, 0.224, 0.225]) #
+        if cfg.TO_NORMALIZE:
+            MEAN = torch.tensor([0.5,0.5,0.5])#([0.485, 0.456, 0.406]) #np.array([0.485, 0.456, 0.406]) #
+            STD = torch.tensor([0.5,0.5,0.5])#([0.229, 0.224, 0.225]) #np.array([0.229, 0.224, 0.225]) #
 
-        if cfg.UNNORM_DISPLAY:
             x_unnorm = x.cpu() * STD[:, None, None] + MEAN[:, None, None]
+        else:
+            x_unnorm = x.cpu()
 
         masked_image = x_unnorm.numpy()[0] # .cpu()
         masked_image_to_show = np.moveaxis(masked_image, 0, -1)
@@ -31,9 +33,11 @@ def evaluate_on_image(masked_image, orig_image, real_parts, gen_model, sum_for_r
 
         g_out = gen_model(x)
 
-        if cfg.UNNORM_DISPLAY:
+        if cfg.TO_NORMALIZE:
             g_out = g_out.cpu() * STD[:, None, None] + MEAN[:, None, None]
-          
+        else:
+            g_out = g_out.cpu()
+
         out_image = g_out.numpy()[0] #.cpu()
         out_image_to_show = np.moveaxis(out_image, 0, -1)
         
@@ -57,8 +61,10 @@ def evaluate_on_image(masked_image, orig_image, real_parts, gen_model, sum_for_r
         x = orig_image
         x = x.view(1, x.shape[0], x.shape[1], x.shape[2])
 
-        if cfg.UNNORM_DISPLAY:
+        if cfg.TO_NORMALIZE:
             x = x.cpu() * STD[:, None, None] + MEAN[:, None, None]
+        else:
+            x = x.cpu()
         
 
         in_image = x.numpy()[0] #.cpu()

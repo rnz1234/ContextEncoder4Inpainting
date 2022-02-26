@@ -103,7 +103,13 @@ class ImagesDataset(Dataset):
         orig_parts = deepcopy(image)
         orig_parts[:, :, :] = 0
         newsize = (self.image_dim_size, self.image_dim_size)
-        mask_im = Image.open(self.random_region_masks_files[idx % len(self.random_region_masks_files)])
+        if self.set_type == SetType.TrainSet: 
+            # on training set we enable shuffling of masks (== randomized mask)
+            mask_index = np.random.randint(0, len(self.random_region_masks_files)-1)
+        else:
+            # on validation set we want the same mask to be able to consistently evaluate
+            mask_index = idx % len(self.random_region_masks_files)
+        mask_im = Image.open(self.random_region_masks_files[mask_index])
         mask_im = mask_im.resize(newsize)
         #mask_im_tensor = self.transform(mask_im)
         mask_im_tensor[mask_im_tensor != 0] = 1

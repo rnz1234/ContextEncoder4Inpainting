@@ -112,7 +112,10 @@ class GeneratorNet(nn.Module):
 			# if we want to generate only a patch / resized image, we can optimize further.
 			# we use the amount of layers needed to generate the wanted image size
 			base_width = 512
-			latent_size = 4#8
+			if cfg.TO_RESIZE:
+				latent_size = 8 / (cfg.ORIG_IMAGE_SIZE / cfg.RESIZE_DIM)
+			else:
+				latent_size = 8
 			# base_width = 1024
 			# latent_size = 4
 			self.base_modules_dec = [*get_basic_structure(4000, base_width, StructureType.Expand, ActivationType.ReLU)]
@@ -121,7 +124,11 @@ class GeneratorNet(nn.Module):
 			self.base_modules_dec.append(nn.Conv2d(int(base_width/(2**(i+1))), 3, 3, 1, 1))
 
 		self.enc_model = nn.Sequential(*self.base_modules_enc)
-		self.dec_model = nn.Sequential(*self.base_modules_dec, nn.Tanh()) #nn.Sigmoid()) 
+		if cfg.TO_NORMALIZE:
+			last_act = nn.Tanh()
+		else:
+			last_act = nn.Sigmoid()
+		self.dec_model = nn.Sequential(*self.base_modules_dec, last_act) #nn.Sigmoid()) 
 
 		print(self.enc_model)
 		print(self.dec_model)
@@ -164,16 +171,16 @@ class DiscriminatorNet(nn.Module):
 		# we generate same output grid size, so there's a different case for full image inserted and partial size
 		if self.input_full_image:
 			# full image - fixed arch
-			base_modules.extend([*get_basic_structure(64, 128, StructureType.Compress, ActivationType.LeakyReLU, norm=NormType.InstanceNorm),
-			*get_basic_structure(128, 256, StructureType.Compress, ActivationType.LeakyReLU, norm=NormType.InstanceNorm),
-			*get_basic_structure(256, 512, StructureType.Compress, ActivationType.LeakyReLU, norm=NormType.InstanceNorm),
-			*get_basic_structure(512, 1024, StructureType.Compress, ActivationType.LeakyReLU, norm=NormType.InstanceNorm),
-			*get_basic_structure(1024, 2048, StructureType.Compress, ActivationType.LeakyReLU, norm=NormType.InstanceNorm),
+			base_modules.extend([*get_basic_structure(64, 128, StructureType.Compress, ActivationType.LeakyReLU, norm=NormType.BatchNorm), #InstanceNorm
+			*get_basic_structure(128, 256, StructureType.Compress, ActivationType.LeakyReLU, norm=NormType.BatchNorm),
+			*get_basic_structure(256, 512, StructureType.Compress, ActivationType.LeakyReLU, norm=NormType.BatchNorm),
+			*get_basic_structure(512, 1024, StructureType.Compress, ActivationType.LeakyReLU, norm=NormType.BatchNorm),
+			*get_basic_structure(1024, 2048, StructureType.Compress, ActivationType.LeakyReLU, norm=NormType.BatchNorm),
 			nn.Conv2d(2048, 1, 3, 1, 1)])
 		else:
 			# partial size - amount of layers changes according to input size
 			for i in range(int(math.log2(input_size/8))):
-				base_modules.extend([*get_basic_structure(64*(2**i), 128*(2**i), StructureType.Compress, ActivationType.LeakyReLU, norm=NormType.InstanceNorm)])	
+				base_modules.extend([*get_basic_structure(64*(2**i), 128*(2**i), StructureType.Compress, ActivationType.LeakyReLU, norm=NormType.BatchNorm)])	
 			base_modules.append(nn.Conv2d(128*(2**i), 1, 3, 1, 1))
 
 		self.model = nn.Sequential(*base_modules)

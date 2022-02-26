@@ -35,9 +35,9 @@ RANDOM_REGION_MASK_MAX_PIXELS = 2000 # Used only for the fully random mode
 MAX_BLOCKS = 10 # Used for the RandomBlock masking method
 
 # Training hyper-parameters
-NUM_EPOCHS = 800 # 500
+NUM_EPOCHS = 700 #200
 
-BATCH_SIZE = 64
+BATCH_SIZE = 64#128
 
 DISC_LR = 0.00002#0.0001
 DISC_BETA1 = 0.5
@@ -50,6 +50,9 @@ if MASKING_METHOD == "RandomRegion":
 else:
     GEN_LR = 0.002 
 
+DOWNSCALE_GEN_TRAIN = True
+DOWNSCALE_GEN_TRAIN_RATIO = 5
+
 APPLY_GAUSSIAN_WEIGHT_INIT = True # only relevant in case there's no pretraining
 
 # Derived constants on dataset (do not change)
@@ -57,10 +60,11 @@ DATASET_PATH = BASE_PROJECT_PATH + 'data/' + DATASET_SELECT
 RANDOM_REGION_TEMPLATES_PATH = BASE_PROJECT_PATH + 'pascal'
 
 # General configuration (not relevant to change)
+ORIG_IMAGE_SIZE = 256
 if TO_RESIZE:
     IMAGE_SIZE = RESIZE_DIM
 else:
-    IMAGE_SIZE = 256
+    IMAGE_SIZE = ORIG_IMAGE_SIZE
 FIXED_RANDOM = True
 RANDOM_SEED = 42
 
@@ -72,5 +76,5 @@ USE_GPU = True
 SHOW_IMAGE = False#True
 SHOW_EXAMPLES_RESULTS_ON_VALID_SET = True
 ENABLE_TENSORBOARD = True
-UNNORM_DISPLAY = True
+#UNNORM_DISPLAY = True
 NUM_EPOCHS_PER_DISPLAY = 10
