@@ -27,7 +27,7 @@ RANDOM_REGION_MASK_MAX_PIXELS = 2000 # Used only for the fully random mode
 MAX_BLOCKS = 10 # Used for the RandomBlock masking method
 
 # Training hyper-parameters
-NUM_EPOCHS = 80
+NUM_EPOCHS = 120
 
 BATCH_SIZE = 32
 

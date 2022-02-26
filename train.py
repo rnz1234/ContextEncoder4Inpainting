@@ -6,8 +6,10 @@ import numpy as np
 from utils import *
 import matplotlib.pyplot as plt
 
-discriminator_loss = list()
-generator_loss = list()
+discriminator_loss_validation = list()
+generator_loss_validation = list()
+discriminator_loss_train = list()
+generator_loss_train = list()
 
 
 def weights_init(m):
@@ -136,6 +138,16 @@ def train_model(gen_model,
             writer.add_scalar('Generator Loss/{}'.format('train'), epoch_gloss, epoch)
             writer.add_scalar('Generator Rec. Loss/{}'.format('train'), epoch_grec_loss, epoch)
             writer.add_scalar('Generator Adv. Loss/{}'.format('train'), epoch_gadv_loss, epoch)
+        else:
+            discriminator_loss_train.append(epoch_dloss)
+            generator_loss_train.append(epoch_gloss)
+            X = range(epoch + 1)
+            plt.plot(X, discriminator_loss_train, color='r', label='disc')
+            plt.plot(X, generator_loss_train, color='g', label='gen')
+            plt.xlabel("Epoch")
+            plt.ylabel("Loss")
+            plt.title("Train Loss functions")
+            plt.show()
 
         # run validation
         if (epoch + 1) % 1 == 0:
@@ -243,14 +255,14 @@ def validate(gen_model,
         # writer.add_scalar('Generator Adv. Loss/{}'.format('valid'), epoch_gadv_loss, epoch)
         pass
     else:
-        discriminator_loss.append(epoch_dloss)
-        generator_loss.append(epoch_gloss)
+        discriminator_loss_validation.append(epoch_dloss)
+        generator_loss_validation.append(epoch_gloss)
         X = range(epoch + 1)
-        plt.plot(X, discriminator_loss, color='r', label='disc')
-        plt.plot(X, generator_loss, color='g', label='gen')
+        plt.plot(X, discriminator_loss_validation, color='r', label='disc')
+        plt.plot(X, generator_loss_validation, color='g', label='gen')
         plt.xlabel("Epoch")
         plt.ylabel("Loss")
-        plt.title("Loss functions")
+        plt.title("Validation Loss functions")
         plt.show()
 
 
