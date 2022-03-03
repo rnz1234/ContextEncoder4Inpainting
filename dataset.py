@@ -2,6 +2,7 @@ import glob
 from random import randrange
 import torch
 from torch.utils.data import Dataset
+from torchvision import transforms
 from PIL import Image, ImageChops
 import numpy as np
 import matplotlib.pyplot as plt
@@ -103,21 +104,28 @@ class ImagesDataset(Dataset):
         orig_parts = deepcopy(image)
         orig_parts[:, :, :] = 0
         newsize = (self.image_dim_size, self.image_dim_size)
-        if self.set_type == SetType.TrainSet: 
-            # on training set we enable shuffling of masks (== randomized mask)
-            mask_index = np.random.randint(0, len(self.random_region_masks_files)-1)
-        else:
-            # on validation set we want the same mask to be able to consistently evaluate
-            mask_index = idx % len(self.random_region_masks_files)
+        # if self.set_type == SetType.TrainSet: 
+        #     # on training set we enable shuffling of masks (== randomized mask)
+        #     mask_index = np.random.randint(0, len(self.random_region_masks_files)-1)
+        # else:
+        #     # on validation set we want the same mask to be able to consistently evaluate
+        mask_index = idx % len(self.random_region_masks_files)
         mask_im = Image.open(self.random_region_masks_files[mask_index])
-        mask_im = mask_im.resize(newsize)
-        #mask_im_tensor = self.transform(mask_im)
+        #mask_im = mask_im.resize(newsize)
+        if cfg.TO_RESIZE:
+          mask_im = mask_im.resize(newsize)
+        
+        mask_im_tensor = transforms.ToTensor()(mask_im)
         mask_im_tensor[mask_im_tensor != 0] = 1
         
         masked_image = deepcopy(image)
         mask_im_tensor_2d = mask_im_tensor.view(self.image_dim_size, self.image_dim_size)
+
+
         # the original parts
         orig_parts[:, mask_im_tensor_2d == 1] = deepcopy(image[:, mask_im_tensor_2d == 1])
+        if cfg.TO_ADD_NOISE_TO_TRAIN_SET:
+            masked_image += np.array(np.random.normal(0.05, 0.05, (masked_image.shape[0], masked_image.shape[1], masked_image.shape[2])), dtype=np.float32)
         # mask by putting max pixel value
         masked_image[:, mask_im_tensor_2d == 1] = 1
 

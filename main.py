@@ -119,8 +119,12 @@ if cfg.USE_GPU:
     gen_model.to(device)
     disc_model.to(device)
 
-gen_optimizer = torch.optim.Adam(gen_model.parameters(), lr=cfg.GEN_LR) #betas=())
+if cfg.WEIGHT_DECAY:
+    gen_optimizer = torch.optim.Adam(gen_model.parameters(), lr=cfg.GEN_LR, weight_decay=cfg.WEIGHT_DECAY_VAL)
+else:
+    gen_optimizer = torch.optim.Adam(gen_model.parameters(), lr=cfg.GEN_LR) #betas=())
 disc_optimizer = torch.optim.Adam(disc_model.parameters(), lr=cfg.DISC_LR, betas=(cfg.DISC_BETA1, cfg.DISC_BETA2))
+
 
 rec_criterion = nn.MSELoss()
 adv_criterion = nn.BCEWithLogitsLoss()
@@ -173,6 +177,8 @@ else:
 
 # save model
 if cfg.ENABLE_MODEL_SAVE:
+    gen_full_model_file = os.path.join(cfg.MODEL_SAVE_PATH, save_prefix + "_gen_full_weights.pt")
+    torch.save(gen_model, gen_full_model_file)
     gen_enc_model_file = os.path.join(cfg.MODEL_SAVE_PATH, save_prefix + "_gen_encoder_weights.pt")
     torch.save(gen_model.get_encoder().state_dict(), gen_enc_model_file)
     gen_dec_model_file = os.path.join(cfg.MODEL_SAVE_PATH, save_prefix + "_gen_decoder_weights.pt")

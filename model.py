@@ -87,14 +87,25 @@ class GeneratorNet(nn.Module):
 		self.output_size = output_size
 
 		# we use a fixed encoder architecture for simplicity
-		self.base_modules_enc = [*get_basic_structure(3, 64, StructureType.Compress, ActivationType.LeakyReLU),
-            *get_basic_structure(64, 64, StructureType.Compress, ActivationType.LeakyReLU),
-			*get_basic_structure(64, 128, StructureType.Compress, ActivationType.LeakyReLU),
-			*get_basic_structure(128, 256, StructureType.Compress, ActivationType.LeakyReLU),
-			*get_basic_structure(256, 512, StructureType.Compress, ActivationType.LeakyReLU),
-			nn.Conv2d(512, 4000, 1)]
-			#*get_basic_structure(512, 1024, StructureType.Compress, ActivationType.LeakyReLU),
-			#nn.Conv2d(1024, 4000, 1)]
+		if self.output_full_image:
+			self.base_modules_enc = [*get_basic_structure(3, 64, StructureType.Compress, ActivationType.LeakyReLU),
+				*get_basic_structure(64, 64, StructureType.Compress, ActivationType.LeakyReLU),
+				*get_basic_structure(64, 128, StructureType.Compress, ActivationType.LeakyReLU),
+				*get_basic_structure(128, 256, StructureType.Compress, ActivationType.LeakyReLU),
+				*get_basic_structure(256, 512, StructureType.Compress, ActivationType.LeakyReLU),
+				nn.Conv2d(512, 4000, 1)]
+				#*get_basic_structure(512, 1024, StructureType.Compress, ActivationType.LeakyReLU),
+				#nn.Conv2d(1024, 4000, 1)]
+
+		else:
+			self.base_modules_enc = [*get_basic_structure(3, 64, StructureType.Compress, ActivationType.LeakyReLU),
+				*get_basic_structure(64, 64, StructureType.Compress, ActivationType.LeakyReLU),
+				*get_basic_structure(64, 128, StructureType.Compress, ActivationType.LeakyReLU),
+				*get_basic_structure(128, 256, StructureType.Compress, ActivationType.LeakyReLU),
+				*get_basic_structure(256, 512, StructureType.Compress, ActivationType.LeakyReLU),
+				nn.Conv2d(512, 4000, 1)]
+				#*get_basic_structure(512, 1024, StructureType.Compress, ActivationType.LeakyReLU),
+				#nn.Conv2d(1024, 4000, 1)]
 
 		
 		
@@ -174,9 +185,10 @@ class DiscriminatorNet(nn.Module):
 			base_modules.extend([*get_basic_structure(64, 128, StructureType.Compress, ActivationType.LeakyReLU, norm=NormType.BatchNorm), #InstanceNorm
 			*get_basic_structure(128, 256, StructureType.Compress, ActivationType.LeakyReLU, norm=NormType.BatchNorm),
 			*get_basic_structure(256, 512, StructureType.Compress, ActivationType.LeakyReLU, norm=NormType.BatchNorm),
-			*get_basic_structure(512, 1024, StructureType.Compress, ActivationType.LeakyReLU, norm=NormType.BatchNorm),
-			*get_basic_structure(1024, 2048, StructureType.Compress, ActivationType.LeakyReLU, norm=NormType.BatchNorm),
-			nn.Conv2d(2048, 1, 3, 1, 1)])
+			#*get_basic_structure(512, 1024, StructureType.Compress, ActivationType.LeakyReLU, norm=NormType.BatchNorm),
+			#*get_basic_structure(1024, 2048, StructureType.Compress, ActivationType.LeakyReLU, norm=NormType.BatchNorm),
+			#nn.Conv2d(2048, 1, 3, 1, 1)])
+			nn.Conv2d(512, 1, 3, 1, 1)])
 		else:
 			# partial size - amount of layers changes according to input size
 			for i in range(int(math.log2(input_size/8))):

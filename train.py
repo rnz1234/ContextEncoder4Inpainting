@@ -99,7 +99,10 @@ def train_model(gen_model,
                 g_adv_loss = adv_criterion(d_out, torch.ones_like(d_out))
 
                 # full loss as described in paper
-                g_loss = joined_loss(lambda_rec, g_rec_loss, lambda_adv, g_adv_loss)
+                if cfg.CANCEL_ADV_TRAIN:
+                    g_loss = joined_loss(lambda_rec, g_rec_loss, 0, 0)
+                else:
+                    g_loss = joined_loss(lambda_rec, g_rec_loss, lambda_adv, g_adv_loss)
 
                 running_gadv_loss += g_adv_loss.item() * orig_image.size(0)
                 #else:
@@ -117,32 +120,32 @@ def train_model(gen_model,
             # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
             #if epoch > 15:
+            if not cfg.CANCEL_ADV_TRAIN:
+                # zero gradient
+                disc_optimizer.zero_grad()
 
-            # zero gradient
-            disc_optimizer.zero_grad()
+                # run discriminator to train identification of real data
+                if cfg.MASKING_METHOD == "CentralRegion":
+                    d_out_real = disc_model(real_parts)
+                else:
+                    d_out_real = disc_model(orig_image)
+                #d_out_real = disc_model(orig_image)
+                d_out_real_loss = adv_criterion(d_out_real, torch.ones_like(d_out))
 
-            # run discriminator to train identification of real data
-            if cfg.MASKING_METHOD == "CentralRegion":
-                d_out_real = disc_model(real_parts)
-            else:
-                d_out_real = disc_model(orig_image)
-            #d_out_real = disc_model(orig_image)
-            d_out_real_loss = adv_criterion(d_out_real, torch.ones_like(d_out))
+                # run discriminator to train identification of fake data
+                d_out_fake = disc_model(g_out.detach())
+                d_out_fake_loss = adv_criterion(d_out_fake, torch.zeros_like(d_out_fake))
 
-            # run discriminator to train identification of fake data
-            d_out_fake = disc_model(g_out.detach())
-            d_out_fake_loss = adv_criterion(d_out_fake, torch.zeros_like(d_out_fake))
+                # full adversarial loss 
+                d_loss = (d_out_real_loss + d_out_fake_loss) / 2
 
-            # full adversarial loss 
-            d_loss = (d_out_real_loss + d_out_fake_loss) / 2
+                # backprop
+                d_loss.backward()
+                disc_optimizer.step()
 
-            # backprop
-            d_loss.backward()
-            disc_optimizer.step()
-
-            running_dloss += d_loss.item() * orig_image.size(0)
-            running_dloss_fake += d_out_fake_loss.item() *  orig_image.size(0)
-            running_dloss_real += d_out_real_loss.item() *  orig_image.size(0)
+                running_dloss += d_loss.item() * orig_image.size(0)
+                running_dloss_fake += d_out_fake_loss.item() *  orig_image.size(0)
+                running_dloss_real += d_out_real_loss.item() *  orig_image.size(0)
 
             running_gloss += g_loss.item() * orig_image.size(0)
             running_grec_loss += g_rec_loss.item() * orig_image.size(0)
@@ -223,7 +226,7 @@ def validate(gen_model,
                         # import pdb
                         # pdb.set_trace()
                         #masked_image[0].view(1, masked_image[0].shape[0], masked_image[0].shape[1], masked_image[0].shape[2])
-                        for j in range(8):
+                        for j in range(16):
                             evaluate_on_image(masked_image[j], orig_image[j], real_parts[j], gen_model, sum_for_random=True)
                     
 
