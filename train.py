@@ -19,14 +19,6 @@ def weights_init(m):
         m.weight.data.normal_(1.0, 0.02)
         m.bias.data.fill_(0)
 
-
-def weights_init(m):
-    if isinstance(m, torch.nn.Conv2d):
-        m.weight.data.normal_(0.0, 0.02)
-    elif isinstance(m, torch.nn.BatchNorm2d):
-        m.weight.data.normal_(1.0, 0.02)
-        m.bias.data.fill_(0)
-
 def joined_loss(lambda_rec, g_rec_loss, lambda_adv, g_adv_loss):
     return lambda_rec * g_rec_loss + lambda_adv * g_adv_loss
 
@@ -65,21 +57,20 @@ def train_model(gen_model,
             real_parts = batch['orig_parts'].to(device)
             masked_image = batch['masked_image'].to(device)
 
-            if (epoch+1) % cfg.NUM_EPOCHS_PER_DISPLAY == 0:
+            if (epoch + 1) % cfg.NUM_EPOCHS_PER_DISPLAY == 0:
                 if i == 0:
                     print("RESULTS ON TRAIN SET:")
                     # import pdb
                     # pdb.set_trace()
-                    #masked_image[0].view(1, masked_image[0].shape[0], masked_image[0].shape[1], masked_image[0].shape[2])
+                    # masked_image[0].view(1, masked_image[0].shape[0], masked_image[0].shape[1], masked_image[0].shape[2])
                     for j in range(8):
                         evaluate_on_image(masked_image[j], orig_image[j], real_parts[j], gen_model, sum_for_random=True)
-
 
             # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             # Training generator
             # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-            #if epoch % 5 == 0:
+            # if epoch % 5 == 0:
             train_gen = True
             if cfg.DOWNSCALE_GEN_TRAIN:
                 if i % cfg.DOWNSCALE_GEN_TRAIN_RATIO == 0:
@@ -98,15 +89,15 @@ def train_model(gen_model,
 
                 # recognition loss
                 if cfg.MASKING_METHOD == "CentralRegion":
-                g_rec_loss = rec_criterion(g_out, real_parts)
-            else:
-                g_rec_loss = rec_criterion(g_out, orig_image)
+                    g_rec_loss = rec_criterion(g_out, real_parts)
+                else:
+                    g_rec_loss = rec_criterion(g_out, orig_image)
 
                 #if epoch > 15:
                 # run discriminator model
                 d_out = disc_model(g_out)
 
-                # print("2")
+                #print("2")
 
                 # adversarial loss : try to fool discriminator (make generator generate images discrimintor cannot mark as fake)
                 g_adv_loss = adv_criterion(d_out, torch.ones_like(d_out))
@@ -122,7 +113,8 @@ def train_model(gen_model,
                 g_loss.backward()
                 gen_optimizer.step()
 
-                # print("3")
+                #print("3")
+
 
             # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             # Training discriminator
@@ -153,8 +145,8 @@ def train_model(gen_model,
             disc_optimizer.step()
 
             running_dloss += d_loss.item() * orig_image.size(0)
-            running_dloss_fake += d_out_fake_loss.item() *  orig_image.size(0)
-            running_dloss_real += d_out_real_loss.item() *  orig_image.size(0)
+            running_dloss_fake += d_out_fake_loss.item() * orig_image.size(0)
+            running_dloss_real += d_out_real_loss.item() * orig_image.size(0)
 
             running_gloss += g_loss.item() * orig_image.size(0)
             running_grec_loss += g_rec_loss.item() * orig_image.size(0)
@@ -179,7 +171,7 @@ def train_model(gen_model,
             writer.add_scalar('Generator Loss/{}'.format('train'), epoch_gloss, epoch)
             writer.add_scalar('Generator Rec. Loss/{}'.format('train'), epoch_grec_loss, epoch)
             writer.add_scalar('Generator Adv. Loss/{}'.format('train'), epoch_gadv_loss, epoch)
-    else:
+        else:
             discriminator_loss_train.append(epoch_dloss)
             generator_loss_train.append(epoch_gloss)
             X = range(epoch + 1)
@@ -190,16 +182,16 @@ def train_model(gen_model,
             plt.title("Train Loss functions")
             plt.show()
 
-        # run validation
+            # run validation
         if (epoch + 1) % cfg.NUM_EPOCHS_PER_DISPLAY == 0:
             show_examples = True
         else:
             show_examples = False
-        validate(gen_model, disc_model, rec_criterion, adv_criterion, lambda_rec, lambda_adv, data_loaders['valid'], dataset_sizes['valid'], epoch, device, writer, show_examples)
-                
-
+        validate(gen_model, disc_model, rec_criterion, adv_criterion, lambda_rec, lambda_adv, data_loaders['valid'],
+                 dataset_sizes['valid'], epoch, device, writer, show_examples)
 
     return gen_model, disc_model
+
 
 def validate(gen_model,
              disc_model,
@@ -239,10 +231,10 @@ def validate(gen_model,
                         print("RESULTS ON VALID SET:")
                         # import pdb
                         # pdb.set_trace()
-                        #masked_image[0].view(1, masked_image[0].shape[0], masked_image[0].shape[1], masked_image[0].shape[2])
+                        # masked_image[0].view(1, masked_image[0].shape[0], masked_image[0].shape[1], masked_image[0].shape[2])
                         for j in range(8):
-                            evaluate_on_image(masked_image[j], orig_image[j], real_parts[j], gen_model, sum_for_random=True)
-                    
+                            evaluate_on_image(masked_image[j], orig_image[j], real_parts[j], gen_model,
+                                              sum_for_random=True)
 
             # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             # Calculating generator loss
@@ -254,7 +246,7 @@ def validate(gen_model,
             # recognition loss
             g_rec_loss = rec_criterion(g_out, real_parts)
 
-            # run discriminator model
+             # run discriminator model
             d_out = disc_model(g_out)
 
             # adversarial loss : try to fool discriminator (make generator generate images discrimintor cannot mark as fake)
@@ -290,6 +282,7 @@ def validate(gen_model,
 
             # full adversarial loss
             d_loss = (d_out_real_loss + d_out_fake_loss) / 2
+
 
         running_dloss += d_loss.item() * orig_image.size(0)
         running_gloss += g_loss.item() * orig_image.size(0)
@@ -335,5 +328,3 @@ def validate(gen_model,
         plt.ylabel("Loss")
         plt.title("Validation Loss functions")
         plt.show()
-
-
