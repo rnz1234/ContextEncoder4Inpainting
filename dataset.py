@@ -2,6 +2,7 @@ import glob
 from random import randrange
 import torch
 from torch.utils.data import Dataset
+from torchvision import transforms
 from PIL import Image, ImageChops
 import numpy as np
 import matplotlib.pyplot as plt
@@ -31,6 +32,7 @@ class ImagesDataset(Dataset):
         else:
             self.set_files = self.image_files[int((1 - cfg.VALID_SET_RATIO) * len(self.image_files)):]
         self.random_region_masks_files = glob.glob(cfg.RANDOM_REGION_TEMPLATES_PATH + "/*.png")
+        self.random_block_masks_files = glob.glob(cfg.RANDOM_BLOCK_TEMPLATES_PATH + "/*.png")
 
         self.masking_method = masking_method
         self.image_dim_size = image_dim_size
@@ -53,32 +55,20 @@ class ImagesDataset(Dataset):
         # mask by putting max pixel value
         if self.set_type == SetType.TrainSet:
             if cfg.TO_ADD_NOISE_TO_TRAIN_SET:
-                masked_image += np.array(np.random.normal(0.05, 0.05, (masked_image.shape[0], masked_image.shape[1], masked_image.shape[2])), dtype=np.float32)
-        masked_image[:, mask_low_idx + self.overlap : mask_high_idx - self.overlap, mask_low_idy + self.overlap : mask_high_idy - self.overlap] = 1
+                masked_image += np.array(
+                    np.random.normal(0.05, 0.05, (masked_image.shape[0], masked_image.shape[1], masked_image.shape[2])),
+                    dtype=np.float32)
+        masked_image[:, mask_low_idx + self.overlap: mask_high_idx - self.overlap,
+        mask_low_idy + self.overlap: mask_high_idy - self.overlap] = 1
         return masked_image, orig_part
 
     def _mask_random_block(self, image, idx):
-        number_of_blocks = randrange(1, cfg.MAX_BLOCKS)
-        ids = []
-        orig_parts = deepcopy(image)
-        # orig_parts[:, :, :] = 0
-
-        mask = Image.open(self.random_region_masks_files[idx % len(self.random_region_masks_files)])
+        mask = Image.open(self.random_block_masks_files[idx % len(self.random_block_masks_files)])
         newsize = (self.image_dim_size, self.image_dim_size)
         mask = mask.resize(newsize)
         mask_tensor = self.transform(mask)
         orig_parts = (mask_tensor * image)
         masked_image = image - mask_tensor
-        # for i in range(number_of_blocks):
-        #     mask_low_idx = randrange(0, self.image_dim_size - self.mask_dim_size)
-        #     mask_low_idy = randrange(0, self.image_dim_size - self.mask_dim_size)
-        #     mask_high_idx = mask_low_idx + self.mask_dim_size
-        #     mask_high_idy = mask_low_idy + self.mask_dim_size
-        #     ids.append((mask_low_idx, mask_high_idx, mask_low_idy, mask_high_idy))
-        # for mask_low_idx, mask_high_idx, mask_low_idy, mask_high_idy in ids:
-        #     orig_parts[:, mask_low_idx:mask_high_idx, mask_low_idy:mask_high_idy] = image[:, mask_low_idx:mask_high_idx, mask_low_idy:mask_high_idy]
-        #     masked_image[:, mask_low_idx:mask_high_idx, mask_low_idy:mask_high_idy] = 1
-
         return masked_image, orig_parts
 
     def _mask_fully_random_region(self, image):
@@ -109,15 +99,29 @@ class ImagesDataset(Dataset):
         orig_parts = deepcopy(image)
         orig_parts[:, :, :] = 0
         newsize = (self.image_dim_size, self.image_dim_size)
-        mask_im = Image.open(self.random_region_masks_files[idx % len(self.random_region_masks_files)])
-        mask_im = mask_im.resize(newsize)
-        mask_im_tensor = self.transform(mask_im)
+        # if self.set_type == SetType.TrainSet:
+        #     # on training set we enable shuffling of masks (== randomized mask)
+        #     mask_index = np.random.randint(0, len(self.random_region_masks_files)-1)
+        # else:
+        #     # on validation set we want the same mask to be able to consistently evaluate
+        mask_index = idx % len(self.random_region_masks_files)
+        mask_im = Image.open(self.random_region_masks_files[mask_index])
+        # mask_im = mask_im.resize(newsize)
+        if cfg.TO_RESIZE:
+            mask_im = mask_im.resize(newsize)
+
+        mask_im_tensor = transforms.ToTensor()(mask_im)
         mask_im_tensor[mask_im_tensor != 0] = 1
 
         masked_image = deepcopy(image)
         mask_im_tensor_2d = mask_im_tensor.view(self.image_dim_size, self.image_dim_size)
+
         # the original parts
         orig_parts[:, mask_im_tensor_2d == 1] = deepcopy(image[:, mask_im_tensor_2d == 1])
+        if cfg.TO_ADD_NOISE_TO_TRAIN_SET:
+            masked_image += np.array(
+                np.random.normal(0.05, 0.05, (masked_image.shape[0], masked_image.shape[1], masked_image.shape[2])),
+                dtype=np.float32)
         # mask by putting max pixel value
         masked_image[:, mask_im_tensor_2d == 1] = 1
 
@@ -128,8 +132,6 @@ class ImagesDataset(Dataset):
         # plt.show()
 
         return masked_image, orig_parts
-
-
 
     def __getitem__(self, idx):
         if torch.is_tensor(idx):

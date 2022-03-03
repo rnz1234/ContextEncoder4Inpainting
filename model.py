@@ -85,14 +85,30 @@ def get_basic_structure(input_size,
 class GeneratorNet(nn.Module):
     def __init__(self, output_full_image=False, output_size=128):
         super(GeneratorNet, self).__init__()
+
         self.output_full_image = output_full_image
         self.output_size = output_size
-        self.base_modules_enc = [*get_basic_structure(3, 64, StructureType.Compress, ActivationType.LeakyReLU),
-                                 *get_basic_structure(64, 64, StructureType.Compress, ActivationType.LeakyReLU),
-                                 *get_basic_structure(64, 128, StructureType.Compress, ActivationType.LeakyReLU),
-                                 *get_basic_structure(128, 256, StructureType.Compress, ActivationType.LeakyReLU),
-                                 *get_basic_structure(256, 512, StructureType.Compress, ActivationType.LeakyReLU),
-                                 nn.Conv2d(512, 4000, 1)]
+
+        # we use a fixed encoder architecture for simplicity
+        if self.output_full_image:
+            self.base_modules_enc = [*get_basic_structure(3, 64, StructureType.Compress, ActivationType.LeakyReLU),
+                                     *get_basic_structure(64, 64, StructureType.Compress, ActivationType.LeakyReLU),
+                                     *get_basic_structure(64, 128, StructureType.Compress, ActivationType.LeakyReLU),
+                                     *get_basic_structure(128, 256, StructureType.Compress, ActivationType.LeakyReLU),
+                                     *get_basic_structure(256, 512, StructureType.Compress, ActivationType.LeakyReLU),
+                                     nn.Conv2d(512, 4000, 1)]
+        # *get_basic_structure(512, 1024, StructureType.Compress, ActivationType.LeakyReLU),
+        # nn.Conv2d(1024, 4000, 1)]
+
+        else:
+            self.base_modules_enc = [*get_basic_structure(3, 64, StructureType.Compress, ActivationType.LeakyReLU),
+                                     *get_basic_structure(64, 64, StructureType.Compress, ActivationType.LeakyReLU),
+                                     *get_basic_structure(64, 128, StructureType.Compress, ActivationType.LeakyReLU),
+                                     *get_basic_structure(128, 256, StructureType.Compress, ActivationType.LeakyReLU),
+                                     *get_basic_structure(256, 512, StructureType.Compress, ActivationType.LeakyReLU),
+                                     nn.Conv2d(512, 4000, 1)]
+        # *get_basic_structure(512, 1024, StructureType.Compress, ActivationType.LeakyReLU),
+        # nn.Conv2d(1024, 4000, 1)]
 
         if self.output_full_image:
             # in this case we reconstruct full image size so architecture is fixed
@@ -131,31 +147,26 @@ class GeneratorNet(nn.Module):
         print(self.enc_model)
         print(self.dec_model)
 
+    # print(self.model)
 
-# print(self.model)
+    def forward(self, input):
+        # latent = self.enc_model(input)
+        # import pdb
+        # pdb.set_trace()
+        # return self.dec_model(latent)
+        return self.dec_model(self.enc_model(input))
 
-def forward(self, input):
-    # latent = self.enc_model(input)
-    # import pdb
-    # pdb.set_trace()
-    # return self.dec_model(latent)
-    return self.dec_model(self.enc_model(input))
+    def get_encoder(self):
+        return self.enc_model
 
+    def get_decoder(self):
+        return self.dec_model
 
-def get_encoder(self):
-    return self.enc_model
+    def load_pretrained_encoder(self, encoder_params_file_path):
+        self.enc_model.load_state_dict(torch.load(encoder_params_file_path))
 
-
-def get_decoder(self):
-    return self.dec_model
-
-
-def load_pretrained_encoder(self, encoder_params_file_path):
-    self.enc_model.load_state_dict(torch.load(encoder_params_file_path))
-
-
-def load_pretrained_decoder(self, decoder_params_file_path):
-    self.dec_model.load_state_dict(torch.load(decoder_params_file_path))
+    def load_pretrained_decoder(self, decoder_params_file_path):
+        self.dec_model.load_state_dict(torch.load(decoder_params_file_path))
 
 
 # Discriminator network
@@ -172,17 +183,15 @@ class DiscriminatorNet(nn.Module):
         if self.input_full_image:
             # full image - fixed arch
             base_modules.extend([*get_basic_structure(64, 128, StructureType.Compress, ActivationType.LeakyReLU,
-                                                      norm=NormType.BatchNorm),
-                                 # InstanceNorm
+                                                      norm=NormType.BatchNorm),  # InstanceNorm
                                  *get_basic_structure(128, 256, StructureType.Compress, ActivationType.LeakyReLU,
                                                       norm=NormType.BatchNorm),
                                  *get_basic_structure(256, 512, StructureType.Compress, ActivationType.LeakyReLU,
                                                       norm=NormType.BatchNorm),
-                                 *get_basic_structure(512, 1024, StructureType.Compress, ActivationType.LeakyReLU,
-                                                      norm=NormType.BatchNorm),
-                                 *get_basic_structure(1024, 2048, StructureType.Compress, ActivationType.LeakyReLU,
-                                                      norm=NormType.BatchNorm),
-                                 nn.Conv2d(2048, 1, 3, 1, 1)])
+                                 # *get_basic_structure(512, 1024, StructureType.Compress, ActivationType.LeakyReLU, norm=NormType.BatchNorm),
+                                 # *get_basic_structure(1024, 2048, StructureType.Compress, ActivationType.LeakyReLU, norm=NormType.BatchNorm),
+                                 # nn.Conv2d(2048, 1, 3, 1, 1)])
+                                 nn.Conv2d(512, 1, 3, 1, 1)])
         else:
             # partial size - amount of layers changes according to input size
             for i in range(int(math.log2(input_size / 8))):
@@ -198,5 +207,5 @@ class DiscriminatorNet(nn.Module):
     def load_model(self, model_params_file_path):
         self.model.load_state_dict(torch.load(model_params_file_path))
 
-# def get_model(self):
+    # def get_model(self):
 # 	return self.model
