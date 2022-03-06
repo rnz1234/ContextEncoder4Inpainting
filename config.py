@@ -1,7 +1,7 @@
 from dataset import MaskingMethod
 
 # Dataset selection
-DATASET_SELECT = 'photo' # 'monet'
+DATASET_SELECT = 'monet' # 'photo'
 BASE_PROJECT_PATH = 'C:/Users/keller/ran/ContextEncoder4Inpainting/'
 #'/home/ranz/projects/github_projects/dl4vision_course/context_encoders/'
 
@@ -14,6 +14,7 @@ TO_RESIZE = True
 RESIZE_DIM = 128
 TO_ADD_NOISE_TO_TRAIN_SET = False #True #True
 TO_NORMALIZE = True
+
 
 # Models Load / Save
 ENABLE_MODEL_SAVE = True
@@ -39,30 +40,52 @@ MAX_BLOCKS = 10 # Used for the RandomBlock masking method
 # Training hyper-parameters
 DISC_BETA1 = 0.5
 DISC_BETA2 = 0.999
-LAMBDA_REC = 0.999
-LAMBDA_ADV = 0.001#0.001
 
-if MASKING_METHOD == "RandomRegion":
+if DATASET_SELECT == 'photo':
+    LAMBDA_STYLE = 0
+    LAMBDA_REC = 0.999
+    LAMBDA_ADV = 0.001#0.001
+    if MASKING_METHOD == "RandomRegion":
+        GEN_LR = 0.002
+        DISC_LR = 0.00002
+        NUM_EPOCHS = 370
+        BATCH_SIZE = 128
+        ENABLE_AUGMENTATIONS = False
+        AUGMENTATIONS_AMOUNT = 4
+    elif MASKING_METHOD == "CentralRegion":
+        GEN_LR = 0.002
+        DISC_LR = 0.0002
+        BATCH_SIZE = 128
+        if MASK_SIZE == 64:
+            NUM_EPOCHS = 120
+        else:
+            NUM_EPOCHS = 160
+        ENABLE_AUGMENTATIONS = False
+        AUGMENTATIONS_AMOUNT = 4
+    else: # RandomBlock
+        GEN_LR = 0.002
+        DISC_LR = 0.00002
+        NUM_EPOCHS = 400
+        BATCH_SIZE = 128
+        ENABLE_AUGMENTATIONS = False
+        AUGMENTATIONS_AMOUNT = 4
+    WEIGHT_DECAY = False
+    WEIGHT_DECAY_VAL = 0.001
+    NET_CROSS_STYLE_LOSS = False
+else:
+    LAMBDA_STYLE = 0.05
+    LAMBDA_REC = 0.949
+    LAMBDA_ADV = 0.001#0.001
     GEN_LR = 0.002
     DISC_LR = 0.00002
     NUM_EPOCHS = 370
-    BATCH_SIZE = 128
-elif MASKING_METHOD == "CentralRegion":
-    GEN_LR = 0.002
-    DISC_LR = 0.0002
-    BATCH_SIZE = 128
-    if MASK_SIZE == 64:
-        NUM_EPOCHS = 120
-    else:
-        NUM_EPOCHS = 160
-else: # RandomBlock
-    GEN_LR = 0.002
-    DISC_LR = 0.00002
-    NUM_EPOCHS = 370
-    BATCH_SIZE = 128
+    BATCH_SIZE = 8
+    ENABLE_AUGMENTATIONS = True #True
+    AUGMENTATIONS_AMOUNT = 4
+    WEIGHT_DECAY = False
+    WEIGHT_DECAY_VAL = 0.00001
+    NET_CROSS_STYLE_LOSS = True
 
-WEIGHT_DECAY = False
-WEIGHT_DECAY_VAL = 0.001
 
 DOWNSCALE_GEN_TRAIN = False
 DOWNSCALE_GEN_TRAIN_RATIO = 5

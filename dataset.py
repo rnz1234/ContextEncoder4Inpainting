@@ -28,7 +28,10 @@ class ImagesDataset(Dataset):
         self.set_type = set_type
         self.image_files = glob.glob(images_dir_path + "/*.jpg")
         if self.set_type == SetType.TrainSet:
-            self.set_files = self.image_files[:int(cfg.TRAIN_SET_RATIO * len(self.image_files))]
+            if cfg.ENABLE_AUGMENTATIONS:
+                self.set_files = self.image_files[:int(cfg.TRAIN_SET_RATIO * len(self.image_files))]*cfg.AUGMENTATIONS_AMOUNT
+            else:
+                self.set_files = self.image_files[:int(cfg.TRAIN_SET_RATIO * len(self.image_files))]
         else:
             self.set_files = self.image_files[int((1-cfg.VALID_SET_RATIO) * len(self.image_files)):]
         self.random_region_masks_files = glob.glob(cfg.RANDOM_REGION_TEMPLATES_PATH + "/*.png")
@@ -109,7 +112,13 @@ class ImagesDataset(Dataset):
         #     mask_index = np.random.randint(0, len(self.random_region_masks_files)-1)
         # else:
         #     # on validation set we want the same mask to be able to consistently evaluate
-        mask_index = idx % len(self.random_region_masks_files)
+        if cfg.ENABLE_AUGMENTATIONS:
+            if len(self.set_files) % len(self.random_region_masks_files) == 0:
+                mask_index = idx % (len(self.random_region_masks_files) - 1)
+            else:
+                mask_index = idx % len(self.random_region_masks_files)
+        else:
+            mask_index = idx % len(self.random_region_masks_files)
         mask_im = Image.open(self.random_region_masks_files[mask_index])
         #mask_im = mask_im.resize(newsize)
         if cfg.TO_RESIZE:
@@ -140,6 +149,7 @@ class ImagesDataset(Dataset):
         
 
     def __getitem__(self, idx):
+        #print(idx)
         if torch.is_tensor(idx):
             idx = idx.tolist()
         image = Image.open(self.set_files[idx])

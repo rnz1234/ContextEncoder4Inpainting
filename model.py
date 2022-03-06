@@ -80,11 +80,13 @@ def get_basic_structure(input_size,
 
 # Generator network (context encoder)
 class GeneratorNet(nn.Module):
-	def __init__(self, output_full_image=False, output_size=128):
+	def __init__(self, output_full_image=False, output_size=128, extract_features=False):
 		super(GeneratorNet, self).__init__()
 
 		self.output_full_image = output_full_image
 		self.output_size = output_size
+		self.extract_features = extract_features
+		self.features = []
 
 		# we use a fixed encoder architecture for simplicity
 		if self.output_full_image:
@@ -151,7 +153,25 @@ class GeneratorNet(nn.Module):
 		# import pdb
 		# pdb.set_trace()
 		# return self.dec_model(latent)
-		return self.dec_model(self.enc_model(input))
+		if self.extract_features:
+			self.features = []
+			#res = self.enc_model(input)
+			res = input
+			for layer in self.enc_model:
+				res = layer(res)
+				#if isinstance(layer, nn.ReLU) or isinstance(layer, nn.LeakyReLU)
+				if len(self.features) < 4:
+					if isinstance(layer, nn.Conv2d):
+						self.features.append(res)
+					
+			res = self.dec_model(res)
+			# for layer in self.dec_model:
+			# 	res = layer(res)
+			# 	if isinstance(layer, nn.ReLU) or isinstance(layer, nn.LeakyReLU):
+			# 		self.features.append(res)
+			return res
+		else:
+			return self.dec_model(self.enc_model(input))
 
 	def get_encoder(self):
 		return self.enc_model
@@ -164,6 +184,10 @@ class GeneratorNet(nn.Module):
 
 	def load_pretrained_decoder(self, decoder_params_file_path):
 		self.dec_model.load_state_dict(torch.load(decoder_params_file_path))
+
+	def get_features(self):
+		return self.features
+
 	
 
 

@@ -8,6 +8,7 @@ import config as cfg
 from dataset import *
 from train import *
 from model import *
+from style_loss import *
 import matplotlib.pyplot as plt
 
 if cfg.ENABLE_TENSORBOARD:
@@ -87,12 +88,25 @@ data_loaders = {
 }
 
 print("Creating models")
+
+if cfg.NET_CROSS_STYLE_LOSS:
+    extract_features = True
+else:
+    extract_features = False
+
 if cfg.MASKING_METHOD == "CentralRegion":
-    gen_model = GeneratorNet(output_full_image=False, output_size=cfg.MASK_SIZE) #False
+    gen_model = GeneratorNet(output_full_image=False, output_size=cfg.MASK_SIZE, extract_features=extract_features) #False
     disc_model = DiscriminatorNet(input_full_image=False, input_size=cfg.MASK_SIZE) #False
 else:
-    gen_model = GeneratorNet(output_full_image=True)
+    gen_model = GeneratorNet(output_full_image=True, extract_features=extract_features)
     disc_model = DiscriminatorNet(input_full_image=True)
+
+if cfg.NET_CROSS_STYLE_LOSS:
+    style_gen_model = GeneratorNet(output_full_image=True, extract_features=True)
+    if cfg.USE_GPU:
+        style_gen_model.to(device)
+else:
+    style_gen_model = None
 
 
 # pretrained model loading
@@ -109,10 +123,18 @@ if cfg.ENABLE_PRETRAINED_MODEL_LOAD:
         gen_model.load_pretrained_encoder(gen_enc_model_file)
         #gen_model.load_pretrained_decoder(gen_dec_model_file)
         #disc_model.load_model(disc_model_file)
+        train_with_style_loss = False
     else:
         gen_enc_model_file = os.path.join(cfg.PRETRAINED_MODEL_PATH, "RandomRegion_gen_encoder_weights.pt")
         gen_model.load_pretrained_encoder(gen_enc_model_file)
-
+        gen_dec_model_file = os.path.join(cfg.PRETRAINED_MODEL_PATH, "RandomRegion_gen_decoder_weights.pt")
+        gen_model.load_pretrained_decoder(gen_dec_model_file)
+        train_with_style_loss = True
+        if cfg.NET_CROSS_STYLE_LOSS:
+            style_gen_model.load_pretrained_encoder(gen_enc_model_file)
+            style_gen_model.load_pretrained_decoder(gen_dec_model_file)
+else:
+    train_with_style_loss = False
 
 print("Doing arrangements to run & log model...")
 if cfg.USE_GPU:
@@ -128,6 +150,7 @@ disc_optimizer = torch.optim.Adam(disc_model.parameters(), lr=cfg.DISC_LR, betas
 
 rec_criterion = nn.MSELoss()
 adv_criterion = nn.BCEWithLogitsLoss()
+style_criterion = StyleLoss()
 
 params = [cfg.BATCH_SIZE,
 cfg.NUM_EPOCHS,
@@ -160,13 +183,17 @@ gen_model, disc_model = train_model(gen_model,
                 disc_optimizer,
                 rec_criterion,
                 adv_criterion,
+                style_criterion,
+                train_with_style_loss,
                 cfg.LAMBDA_REC,
                 cfg.LAMBDA_ADV,
+                cfg.LAMBDA_STYLE,
                 data_loaders, 
                 dataset_sizes,
                 cfg.NUM_EPOCHS,
                 device, 
-                writer)
+                writer,
+                style_gen_model)
 
 print("Saving model")
 
