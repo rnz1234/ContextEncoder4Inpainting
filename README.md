@@ -1,1 +1,0 @@
-# ContextEncoder4Inpainting
