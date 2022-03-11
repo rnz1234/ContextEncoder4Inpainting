@@ -1,7 +1,7 @@
 from dataset import MaskingMethod
 
 # Dataset selection
-DATASET_SELECT = 'monet' # 'photo' / 'monet'
+DATASET_SELECT = 'photo' # 'photo' / 'monet'
 BASE_PROJECT_PATH = 'C:/Users/keller/ran/ContextEncoder4Inpainting/'
 #'/home/ranz/projects/github_projects/dl4vision_course/context_encoders/'
 
@@ -31,7 +31,7 @@ else:
     PRETRAINED_MODEL_PATH_FOR_EVAL = BASE_PROJECT_PATH + 'models/monet/good_model_random_region'
 
 # Inpainting configuration
-MASKING_METHOD = "CentralRegion" #"CentralRegion" "RandomBlock" "RandomRegion"
+MASKING_METHOD = "RandomRegion" #"CentralRegion" "RandomBlock" "RandomRegion"
 MASK_SIZE = 64
 MASK_OVERLAP = 7
 RANDOM_REGION_MASK_MAX_PIXELS = 2000 # Used only for the fully random mode
@@ -85,11 +85,11 @@ else: # 'monet'
         ENABLE_AUGMENTATIONS = True #True
         AUGMENTATIONS_AMOUNT = 8
     elif MASKING_METHOD == "CentralRegion":
-        GEN_LR = 0.002
-        DISC_LR = 0.0002
+        GEN_LR = 0.0002
+        DISC_LR = 0.00002
         BATCH_SIZE = 32
         if MASK_SIZE == 64:
-            NUM_EPOCHS = 120
+            NUM_EPOCHS = 100
         else:
             NUM_EPOCHS = 160
         ENABLE_AUGMENTATIONS = True #True

@@ -21,7 +21,7 @@ force_mask_on_input - True by default. Ensures that mask is forced on the input 
 display_all - display various related images (the masked image, the mask, the reconstruction and the output)
 display_output - display the output
 """
-def infer_inpainting(input_image_path, input_mask_path, output_image_path, model='photo', force_mask_on_input=True, display_all=False, display_output=False):
+def infer_inpainting(input_image_path, input_mask_path, output_image_path=None, model='photo', force_mask_on_input=True, display_all=False, display_output=False):
     # fix randomness to one used in training
     if cfg.FIXED_RANDOM:
         #print("Fixing random in order to enable reproduction")
@@ -99,9 +99,10 @@ def infer_inpainting(input_image_path, input_mask_path, output_image_path, model
         plt.imshow(np.transpose(mask_im_tensor.numpy(), (1, 2, 0)))
         plt.show()
 
+    input_nonorm = np.transpose(input_image_trns_no_norm.numpy(), (1, 2, 0))
     if display_all:
         # display input image
-        plt.imshow(np.transpose(input_image_trns_no_norm.numpy(), (1, 2, 0)))
+        plt.imshow(input_nonorm)
         plt.show()
     
     
@@ -145,11 +146,15 @@ def infer_inpainting(input_image_path, input_mask_path, output_image_path, model
 
     output = np.transpose(output_image_unnorm.numpy(), (1, 2, 0))
     if display_all or display_output:
-        plt.imshow(output)
+        f, axarr = plt.subplots(1, 2, figsize=(16,16))
+        axarr[0].imshow(input_nonorm)
+        axarr[1].imshow(output)
+        # plt.imshow(output)
         plt.show()
 
     if output_image_path is not None:
         plt.imsave(output_image_path, output)
+        plt.show()
 
     return output
 
@@ -166,12 +171,12 @@ def infer_inpainting(input_image_path, input_mask_path, output_image_path, model
 #                 model='photo',
 #                 display=True)
 
-infer_inpainting(input_image_path=cfg.BASE_PROJECT_PATH+'data/examples/example2.jpg',
-                 input_mask_path=cfg.BASE_PROJECT_PATH+'data/examples/example2_mask.jpg', 
-                output_image_path=cfg.BASE_PROJECT_PATH+'data/examples/my_outputs/example_output.png', 
-                model='monet',
-                display_all=False,
-                display_output=True)
+# infer_inpainting(input_image_path=cfg.BASE_PROJECT_PATH+'data/examples/example2.jpg',
+#                  input_mask_path=cfg.BASE_PROJECT_PATH+'data/examples/example2_mask.jpg', 
+#                 output_image_path=cfg.BASE_PROJECT_PATH+'data/examples/my_outputs/example_output.png', 
+#                 model='monet',
+#                 display_all=False,
+#                 display_output=True)
 
 # infer_inpainting(input_image_path=cfg.BASE_PROJECT_PATH+'data/my_examples/000ded5c41.jpg',
 #                  input_mask_path=cfg.BASE_PROJECT_PATH+'data/my_examples/000ded5c41_mask.jpg', 

@@ -144,8 +144,8 @@ class GeneratorNet(nn.Module):
 			last_act = nn.Sigmoid()
 		self.dec_model = nn.Sequential(*self.base_modules_dec, last_act) #nn.Sigmoid()) 
 
-		print(self.enc_model)
-		print(self.dec_model)
+		# print(self.enc_model)
+		# print(self.dec_model)
 
 		#print(self.model)
 
