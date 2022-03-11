@@ -31,8 +31,7 @@ and open browser on http://localhost:6006
 
 The inference module is inference_module.py. It features a function called infer_inpainting which can be used to apply inpainting for a given input image and mask image. The user should specify the model to be used : either "photo" (Photo dataset trained model) or "monet" (Monet dataset trained model).
 
-Note that the model loaded is always the one trained for the random region mask as this is the most generalized one. However, we have the final models we trained for every variation under 
-models/<dataset name>/good_model_<task type>
+Note that by default the model loaded is always the one trained for the random region mask as this is the most generalized one. However, we have the final models we trained for every variation under models/<dataset name>/good_model_<task type>. There is also an argument that can be used to override the default model used, and we used it when it was better (for example using a pretraining that originated from training with random block mask, in order to infer for random block mask images)
 
 ## Running Inference
 

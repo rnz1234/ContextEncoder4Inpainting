@@ -20,8 +20,9 @@ model - either "photo" or "monet". Accordingly to this the correct trained model
 force_mask_on_input - True by default. Ensures that mask is forced on the input image (even if the input image comes already masked).
 display_all - display various related images (the masked image, the mask, the reconstruction and the output)
 display_output - display the output
+pretrained_generator_exact_path - if not None, this is the path for the generator pretraind model - in this case model argument is ignored.
 """
-def infer_inpainting(input_image_path, input_mask_path, output_image_path=None, model='photo', force_mask_on_input=True, display_all=False, display_output=False):
+def infer_inpainting(input_image_path, input_mask_path, output_image_path=None, model='photo', force_mask_on_input=True, display_all=False, display_output=False, pretrained_generator_exact_path=None):
     # fix randomness to one used in training
     if cfg.FIXED_RANDOM:
         #print("Fixing random in order to enable reproduction")
@@ -48,18 +49,21 @@ def infer_inpainting(input_image_path, input_mask_path, output_image_path=None, 
     if cfg.USE_GPU:
         gen_model.to(device)
 
-    # pass to eval model for inference
-    gen_model.eval()
-
     # load model
-    if model == "photo":
-        pretrained_model_path = cfg.BASE_PROJECT_PATH + 'models/photo/good_model_random_region'
-        gen_model_file = os.path.join(pretrained_model_path, "RandomRegion_gen_full_weights.pt")
-    elif model == "monet":
-        pretrained_model_path = cfg.BASE_PROJECT_PATH + 'models/monet/good_model_random_region'
-        gen_model_file = os.path.join(pretrained_model_path, "RandomRegion_gen_full_weights.pt")
+    if pretrained_generator_exact_path is None:
+        if model == "photo":
+            pretrained_model_path = cfg.BASE_PROJECT_PATH + 'models/photo/good_model_random_region'
+            gen_model_file = os.path.join(pretrained_model_path, "RandomRegion_gen_full_weights.pt")
+        elif model == "monet":
+            pretrained_model_path = cfg.BASE_PROJECT_PATH + 'models/monet/good_model_random_region'
+            gen_model_file = os.path.join(pretrained_model_path, "RandomRegion_gen_full_weights.pt")
+    else:
+        gen_model_file = pretrained_generator_exact_path
     #gen_model.load_state_dict(torch.load(gen_model_file))
     gen_model = torch.load(gen_model_file)
+
+    # pass to eval model for inference
+    gen_model.eval()
 
     # setting transforms for image (resize, to tensor, norm)
     # and one also without normalization in order to use it for display / the actual integration with inpainted parts later
@@ -142,7 +146,16 @@ def infer_inpainting(input_image_path, input_mask_path, output_image_path=None, 
 
     # apply the inpainted (reconstructed parts) to the masked image to create the output image
     output_image_unnorm = deepcopy(input_image_trns_no_norm)
-    output_image_unnorm[mask_im_tensor != 0] = reconstructed_unnorm[mask_im_tensor != 0]
+    if pretrained_generator_exact_path is None:
+        output_image_unnorm[mask_im_tensor != 0] = reconstructed_unnorm[mask_im_tensor != 0]
+    elif "CentralRegion_64" in pretrained_generator_exact_path:
+        # optimization for this special case - to indicate the capabilities of a mask-oriented model
+        mask_low_idx = (128 - 64) // 2
+        mask_high_idx = mask_low_idx + 64
+            
+        output_image_unnorm[:, mask_low_idx:mask_high_idx, mask_low_idx:mask_high_idx] = reconstructed_unnorm
+    else:
+        output_image_unnorm[mask_im_tensor != 0] = reconstructed_unnorm[mask_im_tensor != 0]
 
     output = np.transpose(output_image_unnorm.numpy(), (1, 2, 0))
     if display_all or display_output:
