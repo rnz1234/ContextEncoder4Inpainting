@@ -11,7 +11,17 @@ from torchvision import transforms
 import random
 
 
-def infer_inpainting(input_image_path, input_mask_path, output_image_path, model='photo', force_mask_on_input=True, display=False):
+"""
+Inference function - paramters:
+input_image_path - input image path
+input_mask_path - input mask path
+output_image_path - path to store the output image. If None - not saved.
+model - either "photo" or "monet". Accordingly to this the correct trained model will be loaded. Default is "photo".
+force_mask_on_input - True by default. Ensures that mask is forced on the input image (even if the input image comes already masked).
+display_all - display various related images (the masked image, the mask, the reconstruction and the output)
+display_output - display the output
+"""
+def infer_inpainting(input_image_path, input_mask_path, output_image_path, model='photo', force_mask_on_input=True, display_all=False, display_output=False):
     # fix randomness to one used in training
     if cfg.FIXED_RANDOM:
         #print("Fixing random in order to enable reproduction")
@@ -25,9 +35,14 @@ def infer_inpainting(input_image_path, input_mask_path, output_image_path, model
         torch.cuda.empty_cache()
     else:
         device = torch.device("cpu")
-    
+
+
     # instantiate model
-    gen_model = GeneratorNet(output_full_image=True)
+    if model != "photo" and model != "monet":
+        print("unsupported model type")
+        return None
+
+    gen_model = GeneratorNet(output_full_image=True) #, extract_features=extract_features)
 
     # convert to GPU if in use
     if cfg.USE_GPU:
@@ -37,10 +52,14 @@ def infer_inpainting(input_image_path, input_mask_path, output_image_path, model
     gen_model.eval()
 
     # load model
-    gen_enc_model_file = os.path.join(cfg.PRETRAINED_MODEL_PATH_FOR_EVAL, "RandomRegion_gen_encoder_weights.pt")
-    gen_dec_model_file = os.path.join(cfg.PRETRAINED_MODEL_PATH_FOR_EVAL, "RandomRegion_gen_decoder_weights.pt")
-    gen_model.load_pretrained_encoder(gen_enc_model_file)
-    gen_model.load_pretrained_decoder(gen_dec_model_file)
+    if model == "photo":
+        pretrained_model_path = cfg.BASE_PROJECT_PATH + 'models/photo/good_model_random_region'
+        gen_model_file = os.path.join(pretrained_model_path, "RandomRegion_gen_full_weights.pt")
+    elif model == "monet":
+        pretrained_model_path = cfg.BASE_PROJECT_PATH + 'models/monet/good_model_random_region'
+        gen_model_file = os.path.join(pretrained_model_path, "RandomRegion_gen_full_weights.pt")
+    #gen_model.load_state_dict(torch.load(gen_model_file))
+    gen_model = torch.load(gen_model_file)
 
     # setting transforms for image (resize, to tensor, norm)
     # and one also without normalization in order to use it for display / the actual integration with inpainted parts later
@@ -75,12 +94,12 @@ def infer_inpainting(input_image_path, input_mask_path, output_image_path, model
     # apply transforms on mask image
     mask_im_tensor = transforms_list_mask(mask_im)
     
-    if display:
+    if display_all:
         # display mask
         plt.imshow(np.transpose(mask_im_tensor.numpy(), (1, 2, 0)))
         plt.show()
 
-    if display:
+    if display_all:
         # display input image
         plt.imshow(np.transpose(input_image_trns_no_norm.numpy(), (1, 2, 0)))
         plt.show()
@@ -115,7 +134,7 @@ def infer_inpainting(input_image_path, input_mask_path, output_image_path, model
 
     #print(x_unnorm.shape)
 
-    if display:
+    if display_all:
         # display reconstructed
         plt.imshow(np.transpose(reconstructed_unnorm.numpy(), (1, 2, 0)))
         plt.show()
@@ -124,31 +143,38 @@ def infer_inpainting(input_image_path, input_mask_path, output_image_path, model
     output_image_unnorm = deepcopy(input_image_trns_no_norm)
     output_image_unnorm[mask_im_tensor != 0] = reconstructed_unnorm[mask_im_tensor != 0]
 
-    if display:
-        plt.imshow(np.transpose(output_image_unnorm.numpy(), (1, 2, 0)))
+    output = np.transpose(output_image_unnorm.numpy(), (1, 2, 0))
+    if display_all or display_output:
+        plt.imshow(output)
         plt.show()
 
+    if output_image_path is not None:
+        plt.imsave(output_image_path, output)
+
+    return output
 
 
-# infer_inpainting(input_image_path='C:/Users/keller/ran/ContextEncoder4Inpainting/data/my_examples/validation_example.jpg',
-#                  input_mask_path='C:/Users/keller/ran/ContextEncoder4Inpainting/data/my_examples/validation_example_mask.jpg', 
+
+# infer_inpainting(input_image_path=cfg.BASE_PROJECT_PATH+'data/my_examples/validation_example.jpg',
+#                  input_mask_path=cfg.BASE_PROJECT_PATH+'data/my_examples/validation_example_mask.jpg', 
 #                 output_image_path='', 
 #                 model='photo')
 
-# infer_inpainting(input_image_path='C:/Users/keller/ran/ContextEncoder4Inpainting/data/examples/example1.jpg',
-#                  input_mask_path='C:/Users/keller/ran/ContextEncoder4Inpainting/data/examples/example1_mask.jpg', 
+# infer_inpainting(input_image_path=cfg.BASE_PROJECT_PATH+'data/examples/example1.jpg',
+#                  input_mask_path=cfg.BASE_PROJECT_PATH+'data/examples/example1_mask.jpg', 
 #                 output_image_path='', 
 #                 model='photo',
 #                 display=True)
 
-infer_inpainting(input_image_path='C:/Users/keller/ran/ContextEncoder4Inpainting/data/examples/example2.jpg',
-                 input_mask_path='C:/Users/keller/ran/ContextEncoder4Inpainting/data/examples/example2_mask.jpg', 
-                output_image_path='', 
-                model='photo',
-                display=True)
+infer_inpainting(input_image_path=cfg.BASE_PROJECT_PATH+'data/examples/example2.jpg',
+                 input_mask_path=cfg.BASE_PROJECT_PATH+'data/examples/example2_mask.jpg', 
+                output_image_path=cfg.BASE_PROJECT_PATH+'data/examples/my_outputs/example_output.png', 
+                model='monet',
+                display_all=False,
+                display_output=True)
 
-# infer_inpainting(input_image_path='C:/Users/keller/ran/ContextEncoder4Inpainting/data/my_examples/000ded5c41.jpg',
-#                  input_mask_path='C:/Users/keller/ran/ContextEncoder4Inpainting/data/my_examples/000ded5c41_mask.jpg', 
+# infer_inpainting(input_image_path=cfg.BASE_PROJECT_PATH+'data/my_examples/000ded5c41.jpg',
+#                  input_mask_path=cfg.BASE_PROJECT_PATH+'data/my_examples/000ded5c41_mask.jpg', 
 #                 output_image_path='', 
 #                 model='photo',
 #                 display=True)

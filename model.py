@@ -3,6 +3,7 @@ import torch.nn.functional as F
 import torch
 import math
 import config as cfg
+from torchvision import models
 
 class StructureType:
 	Compress = 0
@@ -157,18 +158,23 @@ class GeneratorNet(nn.Module):
 			self.features = []
 			#res = self.enc_model(input)
 			res = input
-			for layer in self.enc_model:
-				res = layer(res)
-				#if isinstance(layer, nn.ReLU) or isinstance(layer, nn.LeakyReLU)
-				if len(self.features) < 4:
-					if isinstance(layer, nn.Conv2d):
-						self.features.append(res)
-					
-			res = self.dec_model(res)
-			# for layer in self.dec_model:
+			# for layer in self.enc_model:
 			# 	res = layer(res)
-			# 	if isinstance(layer, nn.ReLU) or isinstance(layer, nn.LeakyReLU):
-			# 		self.features.append(res)
+			# 	if len(self.features) < 4:
+			# 		#if isinstance(layer, nn.Conv2d):
+			# 		if isinstance(layer, nn.ReLU) or isinstance(layer, nn.LeakyReLU):
+			# 			self.features.append(res)			
+			#res = self.dec_model(res)
+			res = self.enc_model(res)
+			seen = 0
+			for layer in self.dec_model:
+				res = layer(res)
+				#if isinstance(layer, nn.ReLU) or isinstance(layer, nn.LeakyReLU):
+				if isinstance(layer, nn.Tanh):
+				#if isinstance(layer, nn.ReLU) or isinstance(layer, nn.LeakyReLU) or isinstance(layer, nn.Tanh):
+					# seen += 1
+					# if seen > 1:
+					self.features.append(res)
 			return res
 		else:
 			return self.dec_model(self.enc_model(input))
@@ -184,6 +190,12 @@ class GeneratorNet(nn.Module):
 
 	def load_pretrained_decoder(self, decoder_params_file_path):
 		self.dec_model.load_state_dict(torch.load(decoder_params_file_path))
+		torch.nn.init.normal_(self.dec_model[-2].weight.data, mean=0.0, std=0.02)
+		# self.dec_model[-4].weight.data.normal_(1.0, 0.02)
+        # self.dec_model[-4].bias.data.fill_(0)
+		# torch.nn.init.normal_(self.dec_model[-5].weight.data, mean=0.0, std=0.02)
+		# import pdb
+		# pdb.set_trace()
 
 	def get_features(self):
 		return self.features
@@ -229,3 +241,40 @@ class DiscriminatorNet(nn.Module):
 
 	# def get_model(self):
 	# 	return self.model
+
+
+
+
+
+
+
+class Vgg16(nn.Module):
+    def __init__(self):
+        super(Vgg16, self).__init__()
+        features = models.vgg16(pretrained=True).features
+        self.to_relu_1_2 = nn.Sequential() 
+        self.to_relu_2_2 = nn.Sequential() 
+        self.to_relu_3_3 = nn.Sequential()
+        self.to_relu_4_3 = nn.Sequential()
+
+        for x in range(4):
+            self.to_relu_1_2.add_module(str(x), features[x])
+        for x in range(4, 9):
+            self.to_relu_2_2.add_module(str(x), features[x])
+        for x in range(9, 16):
+            self.to_relu_3_3.add_module(str(x), features[x])
+        for x in range(16, 23):
+            self.to_relu_4_3.add_module(str(x), features[x])
+
+    def forward(self, x):
+        h = self.to_relu_1_2(x)
+        h_relu_1_2 = h
+        h = self.to_relu_2_2(h)
+        h_relu_2_2 = h
+        h = self.to_relu_3_3(h)
+        h_relu_3_3 = h
+        h = self.to_relu_4_3(h)
+        h_relu_4_3 = h
+        out = (h_relu_1_2, h_relu_2_2, h_relu_3_3, h_relu_4_3)
+        return out
+

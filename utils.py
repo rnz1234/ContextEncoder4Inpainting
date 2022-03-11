@@ -3,6 +3,7 @@ import numpy as np
 from copy import deepcopy
 import matplotlib.pyplot as plt
 import config as cfg
+from torchvision import transforms
 
 def evaluate_on_image(masked_image, orig_image, real_parts, gen_model, sum_for_random=False):
     with torch.no_grad():
@@ -47,7 +48,7 @@ def evaluate_on_image(masked_image, orig_image, real_parts, gen_model, sum_for_r
 
 
         if sum_for_random:
-            if cfg.MASKING_METHOD == "RandomRegion":
+            if cfg.MASKING_METHOD == "RandomRegion" or cfg.MASKING_METHOD == "RandomBlock":
                 out_image_to_show = build_inpainted_image_full(masked_image_to_show, out_image_to_show, real_parts)
 
         # import pdb
@@ -101,4 +102,20 @@ def build_inpainted_image_full(masked_image, reconstructed, real_parts):
     
 
     return inpainted_image #reconstructed #
+
+
+
+def unnorm_from_mid(input_image, device):
+    MEAN = torch.tensor([0.5,0.5,0.5]).to(device) #([0.485, 0.456, 0.406]) #np.array([0.485, 0.456, 0.406]) #
+    STD = torch.tensor([0.5,0.5,0.5]).to(device) #([0.229, 0.224, 0.225]) #np.array([0.229, 0.224, 0.225]) #
+    return input_image * STD[:, None, None] + MEAN[:, None, None]
+
+def norm_to_vgg16(input_image):
+    # transf = transforms.Compose([transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    #                                 transforms.Resize((224, 224))])
+    transf = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    # import pdb
+    # pdb.set_trace()
+
+    return transf(input_image)
 

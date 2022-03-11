@@ -43,8 +43,9 @@ def train_model(gen_model,
 
         gen_model.train()
         disc_model.train()
-        if cfg.NET_CROSS_STYLE_LOSS:
-            style_gen_model.train()
+        if cfg.NET_CROSS_STYLE_LOSS or cfg.EXTERNAL_REF_NET_CROSS_STYLE_LOSS:
+            style_gen_model.eval()
+            #style_gen_model.train()
 
         running_dloss = 0.0
         running_gloss = 0.0
@@ -74,7 +75,7 @@ def train_model(gen_model,
                     # import pdb
                     # pdb.set_trace()
                     #masked_image[0].view(1, masked_image[0].shape[0], masked_image[0].shape[1], masked_image[0].shape[2])
-                    for j in range(8):
+                    for j in range(cfg.NUM_OF_IMAGES_DISPLAY_ON_TRAIN):
                         evaluate_on_image(masked_image[j], orig_image[j], real_parts[j], gen_model, sum_for_random=True)
                 
 
@@ -103,7 +104,15 @@ def train_model(gen_model,
                 if cfg.MASKING_METHOD == "CentralRegion":
                     g_rec_loss = rec_criterion(g_out, real_parts)
                     if train_with_style_loss:
-                        if cfg.NET_CROSS_STYLE_LOSS:
+                        if cfg.EXTERNAL_REF_NET_CROSS_STYLE_LOSS:
+                            real_parts_normed_to_vgg = norm_to_vgg16(unnorm_from_mid(real_parts, device))
+                            g_style_out_features = style_gen_model(real_parts_normed_to_vgg)
+                            g_out_normed_to_vgg = norm_to_vgg16(unnorm_from_mid(g_out, device)) #g_out
+                            g_out_features = style_gen_model(g_out_normed_to_vgg)
+                            g_style_loss = style_criterion(g_out_features[0], g_style_out_features[0])
+                            for i in range(1, len(g_out_features)):
+                                g_style_loss += style_criterion(g_out_features[i], g_style_out_features[i])
+                        elif cfg.NET_CROSS_STYLE_LOSS:
                             g_out_features = gen_model.get_features()
                             g_style_out = style_gen_model(orig_image)
                             g_style_out_features = style_gen_model.get_features()
@@ -117,7 +126,15 @@ def train_model(gen_model,
                 else:
                     g_rec_loss = rec_criterion(g_out, orig_image)
                     if train_with_style_loss:
-                        if cfg.NET_CROSS_STYLE_LOSS:
+                        if cfg.EXTERNAL_REF_NET_CROSS_STYLE_LOSS:
+                            orig_image_normed_to_vgg = norm_to_vgg16(unnorm_from_mid(orig_image, device))
+                            g_style_out_features = style_gen_model(orig_image_normed_to_vgg)
+                            g_out_normed_to_vgg = norm_to_vgg16(unnorm_from_mid(g_out, device))
+                            g_out_features = style_gen_model(g_out_normed_to_vgg)
+                            g_style_loss = style_criterion(g_out_features[0], g_style_out_features[0])
+                            for i in range(1, len(g_out_features)):
+                                g_style_loss += style_criterion(g_out_features[i], g_style_out_features[i])
+                        elif cfg.NET_CROSS_STYLE_LOSS:
                             g_out_features = gen_model.get_features()
                             g_style_out = style_gen_model(orig_image)
                             g_style_out_features = style_gen_model.get_features()
@@ -255,7 +272,7 @@ def validate(gen_model,
     gen_model.eval()
     disc_model.eval()
 
-    if cfg.NET_CROSS_STYLE_LOSS:
+    if cfg.NET_CROSS_STYLE_LOSS or cfg.EXTERNAL_REF_NET_CROSS_STYLE_LOSS:
         style_gen_model.eval()
 
     running_dloss = 0.0
@@ -284,7 +301,7 @@ def validate(gen_model,
                         # import pdb
                         # pdb.set_trace()
                         #masked_image[0].view(1, masked_image[0].shape[0], masked_image[0].shape[1], masked_image[0].shape[2])
-                        for j in range(8):
+                        for j in range(cfg.NUM_OF_IMAGES_DISPLAY_ON_TRAIN):
                             evaluate_on_image(masked_image[j], orig_image[j], real_parts[j], gen_model, sum_for_random=True)
                     
 
@@ -299,7 +316,16 @@ def validate(gen_model,
             if cfg.MASKING_METHOD == "CentralRegion":
                 g_rec_loss = rec_criterion(g_out, real_parts)
                 if train_with_style_loss:
-                    if cfg.NET_CROSS_STYLE_LOSS:
+                    if cfg.EXTERNAL_REF_NET_CROSS_STYLE_LOSS:
+                        if i == 0:
+                            real_parts_normed_to_vgg = norm_to_vgg16(unnorm_from_mid(real_parts, device))
+                            g_style_out_features = style_gen_model(real_parts_normed_to_vgg)
+                        g_out_normed_to_vgg = norm_to_vgg16(unnorm_from_mid(g_out, device))
+                        g_out_features = style_gen_model(g_out_normed_to_vgg)
+                        g_style_loss = style_criterion(g_out_features[0], g_style_out_features[0])
+                        for i in range(1, len(g_out_features)):
+                            g_style_loss += style_criterion(g_out_features[i], g_style_out_features[i])
+                    elif cfg.NET_CROSS_STYLE_LOSS:
                         g_out_features = gen_model.get_features()
                         g_style_out = style_gen_model(orig_image)
                         g_style_out_features = style_gen_model.get_features()
@@ -313,7 +339,16 @@ def validate(gen_model,
             else:
                 g_rec_loss = rec_criterion(g_out, orig_image)
                 if train_with_style_loss:
-                    if cfg.NET_CROSS_STYLE_LOSS:
+                    if cfg.EXTERNAL_REF_NET_CROSS_STYLE_LOSS:
+                        if i == 0:
+                            orig_image_normed_to_vgg = norm_to_vgg16(unnorm_from_mid(orig_image, device))
+                            g_style_out_features = style_gen_model(orig_image_normed_to_vgg)
+                        g_out_normed_to_vgg = norm_to_vgg16(unnorm_from_mid(g_out, device))
+                        g_out_features = style_gen_model(g_out_normed_to_vgg)
+                        g_style_loss = style_criterion(g_out_features[0], g_style_out_features[0])
+                        for i in range(1, len(g_out_features)):
+                            g_style_loss += style_criterion(g_out_features[i], g_style_out_features[i])
+                    elif cfg.NET_CROSS_STYLE_LOSS:
                         g_out_features = gen_model.get_features()
                         g_style_out = style_gen_model(orig_image)
                         g_style_out_features = style_gen_model.get_features()

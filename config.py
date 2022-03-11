@@ -1,7 +1,7 @@
 from dataset import MaskingMethod
 
 # Dataset selection
-DATASET_SELECT = 'monet' # 'photo'
+DATASET_SELECT = 'monet' # 'photo' / 'monet'
 BASE_PROJECT_PATH = 'C:/Users/keller/ran/ContextEncoder4Inpainting/'
 #'/home/ranz/projects/github_projects/dl4vision_course/context_encoders/'
 
@@ -31,7 +31,7 @@ else:
     PRETRAINED_MODEL_PATH_FOR_EVAL = BASE_PROJECT_PATH + 'models/monet/good_model_random_region'
 
 # Inpainting configuration
-MASKING_METHOD = "RandomRegion" #"CentralRegion" "RandomBlock" "RandomRegion"
+MASKING_METHOD = "CentralRegion" #"CentralRegion" "RandomBlock" "RandomRegion"
 MASK_SIZE = 64
 MASK_OVERLAP = 7
 RANDOM_REGION_MASK_MAX_PIXELS = 2000 # Used only for the fully random mode
@@ -65,26 +65,47 @@ if DATASET_SELECT == 'photo':
     else: # RandomBlock
         GEN_LR = 0.002
         DISC_LR = 0.00002
-        NUM_EPOCHS = 400
+        NUM_EPOCHS = 370
         BATCH_SIZE = 128
         ENABLE_AUGMENTATIONS = False
         AUGMENTATIONS_AMOUNT = 4
     WEIGHT_DECAY = False
     WEIGHT_DECAY_VAL = 0.001
     NET_CROSS_STYLE_LOSS = False
-else:
-    LAMBDA_STYLE = 0.05
-    LAMBDA_REC = 0.949
+    EXTERNAL_REF_NET_CROSS_STYLE_LOSS = False
+else: # 'monet'
+    LAMBDA_STYLE = 2000 
+    LAMBDA_REC = 0.999#0.099
     LAMBDA_ADV = 0.001#0.001
-    GEN_LR = 0.002
-    DISC_LR = 0.00002
-    NUM_EPOCHS = 370
-    BATCH_SIZE = 8
-    ENABLE_AUGMENTATIONS = True #True
-    AUGMENTATIONS_AMOUNT = 4
+    if MASKING_METHOD == "RandomRegion":
+        GEN_LR = 0.0002
+        DISC_LR = 0.00002
+        NUM_EPOCHS = 370
+        BATCH_SIZE = 32
+        ENABLE_AUGMENTATIONS = True #True
+        AUGMENTATIONS_AMOUNT = 8
+    elif MASKING_METHOD == "CentralRegion":
+        GEN_LR = 0.002
+        DISC_LR = 0.0002
+        BATCH_SIZE = 32
+        if MASK_SIZE == 64:
+            NUM_EPOCHS = 120
+        else:
+            NUM_EPOCHS = 160
+        ENABLE_AUGMENTATIONS = True #True
+        AUGMENTATIONS_AMOUNT = 8
+    else: # RandomBlock
+        GEN_LR = 0.0002
+        DISC_LR = 0.00002
+        NUM_EPOCHS = 100
+        BATCH_SIZE = 32
+        ENABLE_AUGMENTATIONS = True #True
+        AUGMENTATIONS_AMOUNT = 8
     WEIGHT_DECAY = False
-    WEIGHT_DECAY_VAL = 0.00001
-    NET_CROSS_STYLE_LOSS = True
+    WEIGHT_DECAY_VAL = 0.000001
+    NET_CROSS_STYLE_LOSS = False
+    EXTERNAL_REF_NET_CROSS_STYLE_LOSS = True
+
 
 
 DOWNSCALE_GEN_TRAIN = False
@@ -95,6 +116,7 @@ APPLY_GAUSSIAN_WEIGHT_INIT = True # only relevant in case there's no pretraining
 # Derived constants on dataset (do not change)
 DATASET_PATH = BASE_PROJECT_PATH + 'data/' + DATASET_SELECT
 RANDOM_REGION_TEMPLATES_PATH = BASE_PROJECT_PATH + 'data/masks_for_random_region'
+RANDOM_BLOCK_TEMPLATES_PATH = BASE_PROJECT_PATH + 'data/masks_for_random_block'
 
 # General configuration (not relevant to change)
 ORIG_IMAGE_SIZE = 256
@@ -114,5 +136,6 @@ SHOW_IMAGE = False#True
 SHOW_EXAMPLES_RESULTS_ON_VALID_SET = True
 ENABLE_TENSORBOARD = True
 #UNNORM_DISPLAY = True
-NUM_EPOCHS_PER_DISPLAY = 10
+NUM_EPOCHS_PER_DISPLAY = 5
 CANCEL_ADV_TRAIN = False #True
+NUM_OF_IMAGES_DISPLAY_ON_TRAIN = 8

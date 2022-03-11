@@ -89,10 +89,13 @@ data_loaders = {
 
 print("Creating models")
 
-if cfg.NET_CROSS_STYLE_LOSS:
-    extract_features = True
-else:
+if cfg.EXTERNAL_REF_NET_CROSS_STYLE_LOSS:
     extract_features = False
+else:
+    if cfg.NET_CROSS_STYLE_LOSS:
+        extract_features = True
+    else:
+        extract_features = False
 
 if cfg.MASKING_METHOD == "CentralRegion":
     gen_model = GeneratorNet(output_full_image=False, output_size=cfg.MASK_SIZE, extract_features=extract_features) #False
@@ -101,7 +104,12 @@ else:
     gen_model = GeneratorNet(output_full_image=True, extract_features=extract_features)
     disc_model = DiscriminatorNet(input_full_image=True)
 
-if cfg.NET_CROSS_STYLE_LOSS:
+if cfg.EXTERNAL_REF_NET_CROSS_STYLE_LOSS:
+    print("Creating VGG16 for style training")
+    style_gen_model = Vgg16()
+    if cfg.USE_GPU:
+        style_gen_model.to(device)
+elif cfg.NET_CROSS_STYLE_LOSS:
     style_gen_model = GeneratorNet(output_full_image=True, extract_features=True)
     if cfg.USE_GPU:
         style_gen_model.to(device)
@@ -120,19 +128,31 @@ if cfg.ENABLE_PRETRAINED_MODEL_LOAD:
         gen_enc_model_file = os.path.join(cfg.PRETRAINED_MODEL_PATH, "CentralRegion_64_gen_encoder_weights.pt")
         #gen_dec_model_file = os.path.join(cfg.PRETRAINED_MODEL_PATH, "CentralRegion_64_gen_decoder_weights.pt")
         #disc_model_file = os.path.join(cfg.PRETRAINED_MODEL_PATH, "CentralRegion_64_disc_weights.pt")
-        gen_model.load_pretrained_encoder(gen_enc_model_file)
+        #gen_model.load_pretrained_encoder(gen_enc_model_file)
         #gen_model.load_pretrained_decoder(gen_dec_model_file)
         #disc_model.load_model(disc_model_file)
         train_with_style_loss = False
     else:
-        gen_enc_model_file = os.path.join(cfg.PRETRAINED_MODEL_PATH, "RandomRegion_gen_encoder_weights.pt")
-        gen_model.load_pretrained_encoder(gen_enc_model_file)
-        gen_dec_model_file = os.path.join(cfg.PRETRAINED_MODEL_PATH, "RandomRegion_gen_decoder_weights.pt")
-        gen_model.load_pretrained_decoder(gen_dec_model_file)
+        if cfg.MASKING_METHOD == "CentralRegion":
+            if cfg.MASK_SIZE == 64:
+                gen_enc_model_file = os.path.join(cfg.BASE_PROJECT_PATH + 'models/photo/good_model_central_region_64', "CentralRegion_64_gen_encoder_weights.pt")
+                gen_model.load_pretrained_encoder(gen_enc_model_file)
+                gen_dec_model_file = os.path.join(cfg.BASE_PROJECT_PATH + 'models/photo/good_model_central_region_64', "CentralRegion_64_gen_decoder_weights.pt")
+                gen_model.load_pretrained_decoder(gen_dec_model_file)
+                #disc_model_file = os.path.join(cfg.PRETRAINED_MODEL_PATH, "RandomRegion_disc_weights.pt")
+                #disc_model.load_state_dict(torch.load(disc_model_file))
+        else:
+            gen_enc_model_file = os.path.join(cfg.PRETRAINED_MODEL_PATH, "RandomRegion_gen_encoder_weights.pt")
+            gen_model.load_pretrained_encoder(gen_enc_model_file)
+            gen_dec_model_file = os.path.join(cfg.PRETRAINED_MODEL_PATH, "RandomRegion_gen_decoder_weights.pt")
+            gen_model.load_pretrained_decoder(gen_dec_model_file)
+            #disc_model_file = os.path.join(cfg.PRETRAINED_MODEL_PATH, "RandomRegion_disc_weights.pt")
+            #disc_model.load_state_dict(torch.load(disc_model_file))
         train_with_style_loss = True
-        if cfg.NET_CROSS_STYLE_LOSS:
-            style_gen_model.load_pretrained_encoder(gen_enc_model_file)
-            style_gen_model.load_pretrained_decoder(gen_dec_model_file)
+        if not cfg.EXTERNAL_REF_NET_CROSS_STYLE_LOSS:
+            if cfg.NET_CROSS_STYLE_LOSS:
+                style_gen_model.load_pretrained_encoder(gen_enc_model_file)
+                style_gen_model.load_pretrained_decoder(gen_dec_model_file)
 else:
     train_with_style_loss = False
 

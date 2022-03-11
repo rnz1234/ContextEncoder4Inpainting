@@ -35,6 +35,7 @@ class ImagesDataset(Dataset):
         else:
             self.set_files = self.image_files[int((1-cfg.VALID_SET_RATIO) * len(self.image_files)):]
         self.random_region_masks_files = glob.glob(cfg.RANDOM_REGION_TEMPLATES_PATH + "/*.png")
+        self.random_block_masks_files = glob.glob(cfg.RANDOM_BLOCK_TEMPLATES_PATH + "/*.png")
         
         self.masking_method = masking_method
         self.image_dim_size = image_dim_size
@@ -61,22 +62,54 @@ class ImagesDataset(Dataset):
         masked_image[:, mask_low_idx + self.overlap : mask_high_idx - self.overlap, mask_low_idy + self.overlap : mask_high_idy - self.overlap] = 1
         return masked_image, orig_part
 
-    def _mask_random_block(self, image):
-        number_of_blocks = randrange(0, cfg.MAX_BLOCKS)
-        orig_parts = []
-        ids = []
+    def _mask_random_block(self, image, idx):
+        # import pdb
+        # pdb.set_trace()
+        orig_parts = deepcopy(image)
+        orig_parts[:, :, :] = 0
+        newsize = (self.image_dim_size, self.image_dim_size)
+        # if self.set_type == SetType.TrainSet: 
+        #     # on training set we enable shuffling of masks (== randomized mask)
+        #     mask_index = np.random.randint(0, len(self.random_block_masks_files)-1)
+        # else:
+        #     # on validation set we want the same mask to be able to consistently evaluate
+        if cfg.ENABLE_AUGMENTATIONS:
+            if len(self.set_files) % len(self.random_block_masks_files) == 0:
+                mask_index = idx % (len(self.random_block_masks_files) - 1)
+            else:
+                mask_index = idx % len(self.random_block_masks_files)
+        else:
+            mask_index = idx % len(self.random_block_masks_files)
+        mask_im = Image.open(self.random_block_masks_files[mask_index])
+        #mask_im = mask_im.resize(newsize)
+        if cfg.TO_RESIZE:
+          mask_im = mask_im.resize(newsize)
+        
+        mask_im_tensor = transforms.ToTensor()(mask_im)
+        # normal_tensor0 = np.array(np.random.normal(0, 0.25, (mask_im_tensor.shape[0], mask_im_tensor.shape[1], mask_im_tensor.shape[2])), dtype=np.float32)
+        # normal_tensor1 = np.array(np.random.normal(0, 0.25, (mask_im_tensor.shape[0], mask_im_tensor.shape[1], mask_im_tensor.shape[2])), dtype=np.float32)
+        # normal_tensor2 = np.array(np.random.normal(0, 0.25, (mask_im_tensor.shape[0], mask_im_tensor.shape[1], mask_im_tensor.shape[2])), dtype=np.float32)
+        mask_im_tensor[mask_im_tensor != 0] = 1 #1
+        
         masked_image = deepcopy(image)
-        for i in range(number_of_blocks):
-            mask_low_idx = randrange(0, self.image_dim_size - self.mask_dim_size)
-            mask_low_idy = randrange(0, self.image_dim_size - self.mask_dim_size)
-            mask_high_idx = mask_low_idx + self.mask_dim_size
-            mask_high_idy = mask_low_idy + self.mask_dim_size
-            _, orig_part = self._mask_block(image, mask_low_idx, mask_high_idx, mask_low_idy, mask_high_idy)
-            orig_parts.append(orig_part)
-            ids.append((mask_low_idx, mask_high_idx, mask_low_idy, mask_high_idy))
-        for mask_low_idx, mask_high_idx, mask_low_idy, mask_high_idy in ids:
-            masked_image[:, mask_low_idx:mask_high_idx, mask_low_idy:mask_high_idy] = 1
-        orig_parts = ImageChops.subtract(image, masked_image)
+        mask_im_tensor_2d = mask_im_tensor.view(self.image_dim_size, self.image_dim_size)
+
+
+        # the original parts
+        orig_parts[:, mask_im_tensor_2d == 1] = deepcopy(image[:, mask_im_tensor_2d == 1])
+        if cfg.TO_ADD_NOISE_TO_TRAIN_SET:
+            masked_image += np.array(np.random.normal(0.05, 0.05, (masked_image.shape[0], masked_image.shape[1], masked_image.shape[2])), dtype=np.float32)
+        # mask by putting max pixel value
+        masked_image[:, mask_im_tensor_2d == 1] = 1
+        # masked_image[0, mask_im_tensor_2d == 1] = torch.Tensor(normal_tensor0[mask_im_tensor != 0]) #1
+        # masked_image[1, mask_im_tensor_2d == 1] = torch.Tensor(normal_tensor1[mask_im_tensor != 0]) #1
+        # masked_image[2, mask_im_tensor_2d == 1] = torch.Tensor(normal_tensor2[mask_im_tensor != 0]) #1
+
+        # plt.imshow(np.transpose(masked_image.numpy(), (1, 2, 0)))
+        # plt.show()
+
+        # plt.imshow(np.transpose(orig_parts.numpy(), (1, 2, 0)))
+        # plt.show()
 
         return masked_image, orig_parts
 
@@ -125,7 +158,10 @@ class ImagesDataset(Dataset):
           mask_im = mask_im.resize(newsize)
         
         mask_im_tensor = transforms.ToTensor()(mask_im)
-        mask_im_tensor[mask_im_tensor != 0] = 1
+        # normal_tensor0 = np.array(np.random.normal(0, 0.25, (mask_im_tensor.shape[0], mask_im_tensor.shape[1], mask_im_tensor.shape[2])), dtype=np.float32)
+        # normal_tensor1 = np.array(np.random.normal(0, 0.25, (mask_im_tensor.shape[0], mask_im_tensor.shape[1], mask_im_tensor.shape[2])), dtype=np.float32)
+        # normal_tensor2 = np.array(np.random.normal(0, 0.25, (mask_im_tensor.shape[0], mask_im_tensor.shape[1], mask_im_tensor.shape[2])), dtype=np.float32)
+        mask_im_tensor[mask_im_tensor != 0] = 1 #1
         
         masked_image = deepcopy(image)
         mask_im_tensor_2d = mask_im_tensor.view(self.image_dim_size, self.image_dim_size)
@@ -137,6 +173,9 @@ class ImagesDataset(Dataset):
             masked_image += np.array(np.random.normal(0.05, 0.05, (masked_image.shape[0], masked_image.shape[1], masked_image.shape[2])), dtype=np.float32)
         # mask by putting max pixel value
         masked_image[:, mask_im_tensor_2d == 1] = 1
+        # masked_image[0, mask_im_tensor_2d == 1] = torch.Tensor(normal_tensor0[mask_im_tensor != 0]) #1
+        # masked_image[1, mask_im_tensor_2d == 1] = torch.Tensor(normal_tensor1[mask_im_tensor != 0]) #1
+        # masked_image[2, mask_im_tensor_2d == 1] = torch.Tensor(normal_tensor2[mask_im_tensor != 0]) #1
 
         # plt.imshow(np.transpose(masked_image.numpy(), (1, 2, 0)))
         # plt.show()
@@ -163,7 +202,7 @@ class ImagesDataset(Dataset):
             # plt.imshow(np.transpose(masked_image.numpy(), (1, 2, 0)))
             # plt.show()
         elif self.masking_method == MaskingMethod.RandomBlock:
-            masked_image, orig_parts = self._mask_random_block(image)
+            masked_image, orig_parts = self._mask_random_block(image, idx)
         elif self.masking_method == MaskingMethod.RandomRegion:
             #masked_image, orig_parts, base_idx, base_idy = self._mask_random_region(image)
             masked_image, orig_parts = self._mask_random_region(image, idx)
